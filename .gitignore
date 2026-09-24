@@ -1,6 +1,10 @@
 # 本地杂项文档、测试数据和外部项目副本
 /docs-local/
 .codex
+/.trellis/
+/.pi/
+/.agent/
+/.agents/
 
 # ===================
 # Go 后端
