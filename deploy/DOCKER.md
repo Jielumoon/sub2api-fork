@@ -5,49 +5,22 @@ Sub2API is an AI API Gateway Platform for distributing and managing AI product s
 ## Quick Start
 
 ```bash
-docker run -d \
-  --name sub2api \
-  -p 8080:8080 \
-  -e DATABASE_URL="postgres://user:pass@host:5432/sub2api" \
-  -e REDIS_URL="redis://host:6379" \
-  weishaw/sub2api:latest
+git clone https://github.com/Jielumoon/sub2api-fork.git
+cd sub2api-fork/deploy
+cp .env.example .env
+# Replace the placeholder POSTGRES_PASSWORD in .env; also set stable
+# JWT_SECRET and TOTP_ENCRYPTION_KEY values before starting.
+nano .env
+docker compose up -d
+docker compose logs -f sub2api
 ```
 
 ## Docker Compose
 
-```yaml
-version: '3.8'
-
-services:
-  sub2api:
-    image: weishaw/sub2api:latest
-    ports:
-      - "8080:8080"
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/sub2api?sslmode=disable
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - db
-      - redis
-
-  db:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=sub2api
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-
-volumes:
-  postgres_data:
-  redis_data:
-```
+The included [`docker-compose.yml`](docker-compose.yml) starts Sub2API,
+PostgreSQL, and Redis with named volumes. For local data directories, use
+[`docker-compose.local.yml`](docker-compose.local.yml). Both pull
+`ghcr.io/jielumoon/sub2api-fork:latest`.
 
 ## Startup and Database Recovery
 
@@ -67,10 +40,10 @@ Docker restores existing containers after a host restart.
 
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Yes | - |
-| `REDIS_URL` | Redis connection string | Yes | - |
-| `PORT` | Server port | No | `8080` |
-| `GIN_MODE` | Gin framework mode (`debug`/`release`) | No | `release` |
+| `POSTGRES_PASSWORD` | PostgreSQL password used by Compose and the application | Yes | - |
+| `JWT_SECRET` | Stable signing secret across restarts | Recommended | Random if empty |
+| `TOTP_ENCRYPTION_KEY` | Stable key for 2FA secrets | Recommended | Random if empty |
+| `SERVER_PORT` | Host port mapped by Compose | No | `8080` |
 
 ## Supported Architectures
 
@@ -86,5 +59,5 @@ Docker restores existing containers after a host restart.
 
 ## Links
 
-- [GitHub Repository](https://github.com/weishaw/sub2api)
-- [Documentation](https://github.com/weishaw/sub2api#readme)
+- [GitHub Repository](https://github.com/Jielumoon/sub2api-fork)
+- [Documentation](https://github.com/Jielumoon/sub2api-fork#readme)
