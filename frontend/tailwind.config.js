@@ -129,6 +129,10 @@ export default {
           '100%': { boxShadow: '0 0 30px rgba(217, 119, 87, 0.12)' }
         }
       },
+      // 带轻微回弹的缓动，用于弹窗和 Toast 入场。
+      transitionTimingFunction: {
+        spring: 'cubic-bezier(0.34, 1.4, 0.64, 1)'
+      },
       backdropBlur: {
         xs: '2px'
       },

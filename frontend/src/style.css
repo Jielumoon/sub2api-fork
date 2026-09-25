@@ -431,7 +431,9 @@
   }
 
   .modal-enter-active .modal-content {
-    transition: transform 250ms ease-out, opacity 250ms ease-out;
+    transition:
+      transform 320ms theme('transitionTimingFunction.spring'),
+      opacity 200ms ease-out;
   }
 
   .modal-leave-active .modal-content {
@@ -440,7 +442,7 @@
 
   .modal-enter-from .modal-content,
   .modal-leave-to .modal-content {
-    transform: scale(0.95);
+    transform: translateY(8px) scale(0.96);
     opacity: 0;
   }
 

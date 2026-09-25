@@ -6,10 +6,10 @@
       aria-atomic="true"
     >
       <TransitionGroup
-        enter-active-class="transition ease-out duration-300"
+        enter-active-class="transition duration-500 ease-spring motion-reduce:transition-none"
         enter-from-class="opacity-0 translate-x-full"
         enter-to-class="opacity-100 translate-x-0"
-        leave-active-class="transition ease-in duration-200"
+        leave-active-class="transition ease-in duration-200 motion-reduce:transition-none"
         leave-from-class="opacity-100 translate-x-0"
         leave-to-class="opacity-0 translate-x-full"
       >
