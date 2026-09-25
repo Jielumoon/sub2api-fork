@@ -9,6 +9,14 @@ type SanitizeOptions = {
   allowDataUrl?: boolean
 }
 
+/**
+ * 把 API 地址规范为根地址：先去掉结尾所有的 /，再去掉结尾的 /v1。
+ * 各客户端会自行拼接 /v1/messages 等路径，根地址里残留 /v1 会请求到 /v1/v1/…。
+ */
+export function toApiRoot(value: string): string {
+  return value.replace(/\/+$/, '').replace(/\/v1$/, '')
+}
+
 export function sanitizeUrl(value: string, options: SanitizeOptions = {}): string {
   const trimmed = value.trim()
   if (!trimmed) {
