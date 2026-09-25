@@ -8,7 +8,7 @@
         <header class="page-header mb-0 flex flex-wrap items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-dark-700 sm:px-6">
           <div class="min-w-0">
             <h1 class="page-title flex items-center gap-2 text-xl font-black text-gray-900 dark:text-white">
-              <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-900/30 dark:text-blue-400">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
                 <Icon name="chart" size="sm" />
               </span>
               {{ t('channelMonitorV2.title') }}
@@ -158,6 +158,14 @@
             <button
               type="button"
               class="tab !px-2 !py-1 text-xs"
+              :class="trendView === 'cards' ? 'tab-active' : ''"
+              @click="trendView = 'cards'"
+            >
+              {{ t('channelMonitorV2.trendView.cards') }}
+            </button>
+            <button
+              type="button"
+              class="tab !px-2 !py-1 text-xs"
               :class="trendView === 'pulse' ? 'tab-active' : ''"
               @click="trendView = 'pulse'"
             >
@@ -174,7 +182,7 @@
           </div>
 
           <div
-            v-if="trendView === 'pulse'"
+            v-if="trendView !== 'line'"
             class="tabs inline-flex shrink-0"
             role="group"
             :aria-label="t('channelMonitorV2.healthMode.label')"
@@ -248,8 +256,16 @@
       </section>
 
       <div class="relative min-h-[320px]">
+        <ChannelCardGrid
+          v-if="trendView === 'cards' && matrix"
+          :rows="matrixRows"
+          :coverage="matrix.coverage"
+          :health-mode="healthMode"
+          :rates="groupRates"
+          :countdown-seconds="countdownSeconds"
+        />
         <MonitorTrendChart
-          v-if="trendView === 'line'"
+          v-else-if="trendView === 'line'"
           :trend="snapshot?.trend || []"
           :coverage="snapshot?.coverage || null"
           :loading="loading && !snapshot"
@@ -468,6 +484,8 @@ import Select from '@/components/common/Select.vue'
 import FilterMultiSelect from '@/features/channel-monitor-v2/FilterMultiSelect.vue'
 import MetricCell from '@/features/channel-monitor-v2/MetricCell.vue'
 import MonitorRankBadge from '@/features/channel-monitor-v2/MonitorRankBadge.vue'
+import ChannelCardGrid from '@/features/channel-monitor-v2/ChannelCardGrid.vue'
+import '@/features/channel-monitor-v2/healthColors.css'
 import MonitorTrendChart from '@/features/channel-monitor-v2/MonitorTrendChart.vue'
 import RelayPulseMatrix from '@/features/channel-monitor-v2/RelayPulseMatrix.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -475,6 +493,7 @@ import { useAppStore } from '@/stores/app'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import { isChannelMonitorThroughputHidden, isChannelMonitorUserRankingHidden } from '@/utils/featureFlags'
 import * as api from '@/api/channelMonitorV2'
+import userGroupsAPI from '@/api/groups'
 import type {
   HealthState,
   MonitorDimensions,
@@ -503,7 +522,7 @@ import {
 
 type Tab = 'models' | 'errors' | 'users'
 type HealthMode = 'overall' | 'success' | 'ttft' | 'cache'
-type TrendView = 'pulse' | 'line'
+type TrendView = 'cards' | 'pulse' | 'line'
 
 const route = useRoute()
 const router = useRouter()
@@ -568,6 +587,15 @@ const expandedErrors = ref(new Set<string>())
 let controller: AbortController | null = null
 let sequence = 0
 let autoRefreshTimer: number | null = null
+/** group_id → 生效倍率（专属倍率优先），供卡片显示；接口失败时为空表。 */
+const groupRates = ref<Record<number, number>>({})
+// 自动刷新倒计时只用于显示，刷新节奏仍由 scheduleAutoRefresh 决定。
+const nextRefreshAt = ref(0)
+const nowTick = ref(Date.now())
+let countdownTimer: number | null = null
+const countdownSeconds = computed(() =>
+  nextRefreshAt.value ? Math.max(0, Math.ceil((nextRefreshAt.value - nowTick.value) / 1000)) : null
+)
 
 const hasDimensionFilter = computed(
   () => filter.value.platforms.length + filter.value.groupIds.length + filter.value.models.length > 0
@@ -687,7 +715,8 @@ function parseHealthMode(value: unknown): HealthMode {
   return allowed.includes(value as HealthMode) ? (value as HealthMode) : 'overall'
 }
 function parseTrendView(value: unknown): TrendView {
-  return value === 'line' ? 'line' : 'pulse'
+  // 卡片为默认视图；旧链接里的 pulse / line 仍然有效。
+  return value === 'line' || value === 'pulse' ? value : 'cards'
 }
 function syncQuery() {
   void router.replace({
@@ -698,7 +727,7 @@ function syncQuery() {
       model: filter.value.models.join(',') || undefined,
       group_by: matrixGroupBy.value,
       health_mode: healthMode.value,
-      trend_view: trendView.value === 'line' ? 'line' : undefined,
+      trend_view: trendView.value === 'cards' ? undefined : trendView.value,
       tab: activeTab.value,
     },
   })
@@ -817,11 +846,21 @@ function scheduleAutoRefresh() {
   const seconds = bootstrapActive.value
     ? 10
     : snapshot.value?.config?.refresh_interval_seconds || 300
+  const intervalMs = Math.max(bootstrapActive.value ? 10 : 60, seconds) * 1000
+  nextRefreshAt.value = Date.now() + intervalMs
   autoRefreshTimer = window.setInterval(() => {
+    nextRefreshAt.value = Date.now() + intervalMs
     if (!loading.value && !refreshing.value) {
       void reload(true)
     }
-  }, Math.max(bootstrapActive.value ? 10 : 60, seconds) * 1000)
+  }, intervalMs)
+}
+async function loadGroupRates() {
+  const [groups, userRates] = await Promise.all([
+    userGroupsAPI.getAvailable().catch(() => []),
+    userGroupsAPI.getUserGroupRates().catch(() => ({} as Record<number, number>)),
+  ])
+  groupRates.value = Object.fromEntries(groups.map((group) => [group.id, userRates[group.id] ?? group.rate_multiplier]))
 }
 function drillModel(row: MonitorModelRow) {
   filter.value.platforms = [row.platform]
@@ -924,37 +963,21 @@ watch(showUserRanking, (allowed) => {
     activeTab.value = 'models'
   }
 })
-onMounted(() => void reload(false))
+onMounted(() => {
+  void reload(false)
+  void loadGroupRates()
+  countdownTimer = window.setInterval(() => {
+    nowTick.value = Date.now()
+  }, 1000)
+})
 onBeforeUnmount(() => {
   controller?.abort()
   if (autoRefreshTimer) window.clearInterval(autoRefreshTimer)
+  if (countdownTimer) window.clearInterval(countdownTimer)
 })
 </script>
 
 <style scoped>
-.status-dot {
-  display: inline-block;
-  height: 0.5rem;
-  width: 0.5rem;
-  flex: none;
-  border-radius: 9999px;
-}
-/* Multi-stop green → yellow → red score bands */
-.health-score10 { background: #16a34a; }
-.health-score9  { background: #22c55e; }
-.health-score8  { background: #4ade80; }
-.health-score7  { background: #a3e635; }
-.health-score6  { background: #facc15; }
-.health-score5  { background: #fbbf24; }
-.health-score4  { background: #f59e0b; }
-.health-score3  { background: #f97316; }
-.health-score2  { background: #fb7185; }
-.health-score1  { background: #f87171; }
-.health-score0  { background: rgb(239, 67, 67); }
-.health-healthy  { background: #22c55e; }
-.health-warning  { background: #f59e0b; }
-.health-critical { background: #ef4444; }
-.health-unknown  { background: #9ca3af; }
 .matrix-select {
   min-width: 10rem;
 }

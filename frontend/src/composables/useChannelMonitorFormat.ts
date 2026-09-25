@@ -67,6 +67,20 @@ export function useChannelMonitorFormat() {
     }
   }
 
+  /** 状态徽章里的圆点色，与 statusBadgeClass 同一口径：error 属系统错误，保持中性灰。 */
+  function statusDotClass(s: MonitorStatus | ''): string {
+    switch (s) {
+      case STATUS_OPERATIONAL:
+        return 'bg-emerald-500'
+      case STATUS_DEGRADED:
+        return 'bg-amber-500'
+      case STATUS_FAILED:
+        return 'bg-red-500'
+      default:
+        return 'bg-gray-400'
+    }
+  }
+
   function providerLabel(p: Provider | string): string {
     if (PROVIDERS.includes(p as Provider)) {
       return t(`monitorCommon.providers.${p}`)
@@ -227,6 +241,7 @@ export function useChannelMonitorFormat() {
   return {
     statusLabel,
     statusBadgeClass,
+    statusDotClass,
     providerLabel,
     checkModeLabel,
     formatMonitorModel,
@@ -279,4 +294,24 @@ export function providerGradient(provider: string): string {
     default:
       return 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-dark-700 dark:to-dark-600'
   }
+}
+
+// 图标配色与 utils/platformColors.ts 的平台色对齐；V1 / V2 卡片和平台组头共用。
+const PROVIDER_TINT: Record<string, string> = {
+  openai: 'text-emerald-600 dark:text-emerald-300',
+  anthropic: 'text-orange-600 dark:text-orange-300',
+  gemini: 'text-sky-600 dark:text-sky-300',
+  grok: 'text-zinc-700 dark:text-zinc-200',
+  antigravity: 'text-purple-600 dark:text-purple-300',
+  kimi: 'text-pink-600 dark:text-pink-300',
+  zhipu: 'text-indigo-600 dark:text-indigo-300',
+  deepseek: 'text-teal-600 dark:text-teal-300',
+  opencode_go: 'text-amber-700 dark:text-amber-300',
+}
+
+/**
+ * Tailwind text color class for the provider icon.
+ */
+export function providerTint(provider: string): string {
+  return PROVIDER_TINT[provider] ?? 'text-gray-500 dark:text-gray-300'
 }

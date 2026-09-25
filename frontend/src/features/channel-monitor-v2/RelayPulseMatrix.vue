@@ -196,6 +196,12 @@ import {
   sliceByZoom,
   type ZoomState,
 } from '@/features/channel-monitor-v2/monitorZoom'
+import {
+  alignRows,
+  bucketStartsForCoverage,
+  type BucketSlot,
+} from '@/features/channel-monitor-v2/monitorBuckets'
+import '@/features/channel-monitor-v2/healthColors.css'
 
 type HealthMode = 'overall' | 'success' | 'ttft' | 'cache'
 const { t, locale } = useI18n()
@@ -211,7 +217,7 @@ const props = withDefaults(
   { showThroughput: true },
 )
 
-type AlignedSlot = { start: string; bucket?: MonitorMatrixBucket }
+type AlignedSlot = BucketSlot
 
 const floatingTooltip = reactive({
   visible: false,
@@ -224,26 +230,9 @@ const scrollRef = ref<HTMLElement | null>(null)
 const zoom = ref<ZoomState>(resetZoom())
 const zoomed = computed(() => isZoomed(zoom.value))
 
-const allBucketStarts = computed(() => {
-  // X-axis always spans the UI-selected range [requested_start, requested_end).
-  // Partial backfill leaves empty cells until coverage_start/data_through fill in.
-  const step = Math.max(60, props.coverage.bucket_seconds) * 1000
-  const requestedStart = new Date(props.coverage.requested_start).getTime()
-  const requestedEndRaw = props.coverage.requested_end
-    ? new Date(props.coverage.requested_end).getTime()
-    : NaN
-  // Fallback for older payloads without requested_end.
-  const dataThrough = new Date(props.coverage.data_through).getTime()
-  const end = Number.isFinite(requestedEndRaw) && requestedEndRaw > requestedStart
-    ? requestedEndRaw
-    : dataThrough
-  if (![requestedStart, end].every(Number.isFinite) || requestedStart >= end) return []
-  const starts: string[] = []
-  for (let cursor = Math.floor(requestedStart / step) * step; cursor < end; cursor += step) {
-    starts.push(new Date(cursor).toISOString())
-  }
-  return starts
-})
+// X-axis always spans the UI-selected range [requested_start, requested_end).
+// Partial backfill leaves empty cells until coverage_start/data_through fill in.
+const allBucketStarts = computed(() => bucketStartsForCoverage(props.coverage))
 /** Visible bucket window after X zoom (cursor-centered), not always the tail. */
 const bucketStarts = computed(() => sliceByZoom(allBucketStarts.value, zoom.value))
 const tableStyle = computed(() => ({
@@ -287,27 +276,8 @@ const bucketLabel = computed(() => {
   return t('channelMonitorV2.bucket.days', { count: hours / 24 })
 })
 
-/** Shared ISO start → column index for the visible window (rebuilt when zoom/coverage changes). */
-const bucketStartIndex = computed(() => {
-  const map = new Map<string, number>()
-  bucketStarts.value.forEach((start, index) => map.set(start, index))
-  return map
-})
-
 /** Pre-aligned sparse slots per row so wheel zoom does not rebuild Maps every paint. */
-const alignedRows = computed(() => {
-  const starts = bucketStarts.value
-  const indexByStart = bucketStartIndex.value
-  return props.rows.map((row) => {
-    const slots: AlignedSlot[] = starts.map((start) => ({ start }))
-    for (const bucket of row.buckets || []) {
-      const key = new Date(bucket.bucket_start).toISOString()
-      const index = indexByStart.get(key)
-      if (index != null) slots[index] = { start: starts[index], bucket }
-    }
-    return { row, slots }
-  })
-})
+const alignedRows = computed(() => alignRows(props.rows, bucketStarts.value))
 
 function onMatrixWheel(event: WheelEvent) {
   const track = scrollRef.value
@@ -499,31 +469,6 @@ function formatBucketRange(value: string) {
 .pulse-track {
   min-width: 0;
 }
-.status-dot {
-  display: inline-block;
-  height: 0.5rem;
-  width: 0.5rem;
-  flex: none;
-  border-radius: 9999px;
-}
-
-/* Multi-stop green → yellow → red (score10 best … score0 worst) */
-.health-score10 { background: #16a34a; }
-.health-score9  { background: #22c55e; }
-.health-score8  { background: #4ade80; }
-.health-score7  { background: #a3e635; }
-.health-score6  { background: #facc15; }
-.health-score5  { background: #fbbf24; }
-.health-score4  { background: #f59e0b; }
-.health-score3  { background: #f97316; }
-.health-score2  { background: #fb7185; }
-.health-score1  { background: #f87171; }
-.health-score0  { background: rgb(239, 67, 67); }
-/* Coarse fallbacks (older payloads without score) */
-.health-healthy  { background: #22c55e; }
-.health-warning  { background: #f59e0b; }
-.health-critical { background: #ef4444; }
-.health-unknown  { background: #9ca3af; }
 
 .score-legend {
   background: linear-gradient(

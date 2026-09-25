@@ -30,7 +30,7 @@ export default {
     groupBy: {
       label: 'Group by', platform: 'Platform', platformGroup: 'Platform / Group', platformModel: 'Platform / Model', platformGroupModel: 'Platform / Group / Model'
     },
-    trendView: { label: 'Trend view', pulse: 'Pulse matrix', line: 'Line chart' },
+    trendView: { label: 'Trend view', cards: 'Cards', pulse: 'Pulse matrix', line: 'Line chart' },
     healthMode: { label: 'Health display', overall: 'Overall', success: 'Error rate', ttft: 'First token', cache: 'Cache rate' },
     tabs: { aria: 'Detail dimension', models: 'Models', errors: 'Error reasons', users: 'User ranking' },
     metrics: {
@@ -58,6 +58,11 @@ export default {
     },
     table: { platformModel: 'Platform / Model', rank: 'Rank', user: 'User' },
     empty: { title: 'No data to display', description: 'Try changing the time range or filters' },
+    cards: {
+      recent: 'Last {n} buckets',
+      rate: 'Rate {rate}x',
+      health: { healthy: 'Healthy', warning: 'Watch', critical: 'Critical', unknown: 'No traffic' },
+    },
     bucket: { minutes: '{count}-minute buckets', hours: '{count}-hour buckets', days: '{count}-day buckets' },
     matrix: {
       title: 'Availability trend', description: 'Each row is a channel dimension and each block is an aggregate interval; hover for details', wheelZoom: 'Scroll over blocks to zoom in (narrower range, wider blocks)', wheelZoomX: 'Scroll over blocks to zoom in (narrower range, wider blocks)', dimension: 'Channel dimension', emptyTitle: 'No matrix data for the selected window', legendAria: 'Health score legend', bad: 'Bad', good: 'Good', healthyLegend: 'Healthy (≥80)', warningLegend: 'Watch (50–79)', criticalLegend: 'Critical (<50)', unknownLegend: 'No traffic / insufficient samples', noTraffic: 'No traffic in this interval', noTrafficAt: '{time} · no traffic', scoreLine: 'Health score {score}', resetZoom: 'Reset zoom'

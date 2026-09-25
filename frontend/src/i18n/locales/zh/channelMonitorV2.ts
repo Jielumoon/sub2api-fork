@@ -30,7 +30,7 @@ export default {
     groupBy: {
       label: '展示维度', platform: '平台', platformGroup: '平台 / 分组', platformModel: '平台 / 模型', platformGroupModel: '平台 / 分组 / 模型'
     },
-    trendView: { label: '趋势视图', pulse: '色块矩阵', line: '折线图' },
+    trendView: { label: '趋势视图', cards: '卡片', pulse: '色块矩阵', line: '折线图' },
     healthMode: { label: '健康显示', overall: '综合', success: '错误率', ttft: '首 Token', cache: '缓存率' },
     tabs: { aria: '明细维度', models: '模型', errors: '错误原因', users: '用户排行' },
     metrics: {
@@ -58,6 +58,11 @@ export default {
     },
     table: { platformModel: '平台 / 模型', rank: '排名', user: '用户' },
     empty: { title: '没有可展示的数据', description: '尝试调整时间范围或筛选条件' },
+    cards: {
+      recent: '近 {n} 个区间',
+      rate: '倍率 {rate}x',
+      health: { healthy: '健康', warning: '需关注', critical: '异常', unknown: '无流量' },
+    },
     bucket: { minutes: '{count} 分钟粒度', hours: '{count} 小时粒度', days: '{count} 天粒度' },
     matrix: {
       title: '可用性趋势', description: '每行是一种渠道组合，每个色块代表一个统计区间；悬停查看明细', wheelZoom: '在色块上滚轮放大（区间变窄、色块变宽）', wheelZoomX: '在色块上滚轮放大（区间变窄、色块变宽）', dimension: '渠道维度', emptyTitle: '当前筛选窗口没有矩阵数据', legendAria: '健康分数图例', bad: '差', good: '好', healthyLegend: '健康 (≥80)', warningLegend: '需关注 (50–79)', criticalLegend: '异常 (<50)', unknownLegend: '无流量 / 样本不足', noTraffic: '该区间无流量', noTrafficAt: '{time} · 无流量', scoreLine: '健康分 {score}', resetZoom: '重置缩放'
