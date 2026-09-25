@@ -1,21 +1,18 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-dark-950">
-    <!-- Background Decoration -->
-    <div class="pointer-events-none fixed inset-0 bg-mesh-gradient"></div>
-
+  <div class="min-h-screen bg-gray-100 dark:bg-dark-950">
     <!-- Sidebar -->
     <AppSidebar />
 
     <!-- Main Content Area -->
     <div
-      class="relative min-h-screen transition-all duration-300"
+      class="relative min-h-screen transition-all duration-300 lg:pb-2"
       :class="[sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-64']"
     >
       <!-- Header -->
       <AppHeader />
 
       <!-- Main Content -->
-      <main class="p-4 md:p-6 lg:p-8">
+      <main class="min-h-[calc(100vh-4rem)] bg-gray-50 p-4 dark:bg-dark-900 md:p-6 lg:mx-2 lg:min-h-[calc(100vh-4.5rem)] lg:rounded-2xl lg:border lg:border-gray-200 lg:p-8 dark:lg:border-dark-700">
         <slot />
       </main>
     </div>

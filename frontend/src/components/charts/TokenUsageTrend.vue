@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { chartPalette } from '@/utils/chartColors'
 import { useI18n } from 'vue-i18n'
 import {
   Chart as ChartJS,
@@ -59,13 +60,13 @@ const isDarkMode = computed(() => {
 })
 
 const chartColors = computed(() => ({
-  text: isDarkMode.value ? '#e5e7eb' : '#374151',
-  grid: isDarkMode.value ? '#374151' : '#e5e7eb',
-  input: '#3b82f6',
-  output: '#10b981',
-  cacheCreation: '#f59e0b',
-  cacheRead: '#06b6d4',
-  cacheHitRate: '#8b5cf6'
+  text: isDarkMode.value ? '#e0ded8' : '#474441',
+  grid: isDarkMode.value ? '#3f3d3a' : '#e9e6de',
+  input: chartPalette[0],
+  output: chartPalette[1],
+  cacheCreation: chartPalette[2],
+  cacheRead: chartPalette[4],
+  cacheHitRate: chartPalette[3]
 }))
 
 const chartData = computed(() => {

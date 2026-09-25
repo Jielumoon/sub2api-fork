@@ -1,3 +1,18 @@
+// 画布与辅助色共用暖中性色，避免把表面染成主色。
+const warmGray = {
+  50: '#fafaf7',
+  100: '#f4f2ed',
+  200: '#e9e6de',
+  300: '#d7d4cc',
+  400: '#b0aea6',
+  500: '#76726d',
+  600: '#5d5a56',
+  700: '#474441',
+  800: '#2d2b28',
+  900: '#201e1c',
+  950: '#151312'
+}
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
@@ -5,47 +20,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 主色调 - Teal/Cyan 青色系
+        // 陶土主色；白字按钮使用 600，而不是对比度不足的 500。
         primary: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e'
+          50: '#fff4f0',
+          100: '#fee7df',
+          200: '#fecfbe',
+          300: '#faaf96',
+          400: '#f19173',
+          500: '#d97757',
+          600: '#b55336',
+          700: '#97442d',
+          800: '#793626',
+          900: '#602b1e',
+          950: '#38170e'
         },
-        // 辅助色 - 深蓝灰
-        accent: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617'
-        },
-        // 深色模式背景
+        gray: warmGray,
+        accent: warmGray,
+        // 保留页面、卡片、描边的既有色阶语义。
         dark: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617'
+          50: '#f9f8f5',
+          100: '#f2f0ec',
+          200: '#e0ded8',
+          300: '#c0bdb8',
+          400: '#9a9893',
+          500: '#777471',
+          600: '#575552',
+          700: '#3f3d3a',
+          800: '#2c2a28',
+          900: '#22201f',
+          950: '#1b1918'
         }
       },
       fontFamily: {
@@ -62,25 +65,27 @@ export default {
           'Microsoft YaHei',
           'sans-serif'
         ],
+        // 不前置 ui-serif，避免中文被系统衬线字体提前接管。
+        serif: ['Georgia', 'Cambria', 'Times New Roman', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
       },
       boxShadow: {
         glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
         'glass-sm': '0 4px 16px rgba(0, 0, 0, 0.06)',
-        glow: '0 0 20px rgba(20, 184, 166, 0.25)',
-        'glow-lg': '0 0 40px rgba(20, 184, 166, 0.35)',
-        card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)',
-        'card-hover': '0 10px 40px rgba(0, 0, 0, 0.08)',
+        glow: '0 0 20px rgba(217, 119, 87, 0.08)',
+        'glow-lg': '0 0 40px rgba(217, 119, 87, 0.12)',
+        card: '0 1px 2px rgba(32, 30, 28, 0.03)',
+        'card-hover': '0 1px 2px rgba(32, 30, 28, 0.05)',
         'inner-glow': 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
-        'gradient-dark': 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #d97757 0%, #b55336 100%)',
+        'gradient-dark': 'linear-gradient(135deg, #2c2a28 0%, #22201f 100%)',
         'gradient-glass':
           'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
         'mesh-gradient':
-          'radial-gradient(at 40% 20%, rgba(20, 184, 166, 0.12) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(20, 184, 166, 0.08) 0px, transparent 50%)'
+          'radial-gradient(at 70% 10%, rgba(217, 119, 87, 0.06) 0px, transparent 60%)'
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
@@ -118,8 +123,8 @@ export default {
           '100%': { backgroundPosition: '200% 0' }
         },
         glow: {
-          '0%': { boxShadow: '0 0 20px rgba(20, 184, 166, 0.25)' },
-          '100%': { boxShadow: '0 0 30px rgba(20, 184, 166, 0.4)' }
+          '0%': { boxShadow: '0 0 20px rgba(217, 119, 87, 0.08)' },
+          '100%': { boxShadow: '0 0 30px rgba(217, 119, 87, 0.12)' }
         }
       },
       backdropBlur: {
