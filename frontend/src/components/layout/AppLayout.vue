@@ -12,7 +12,7 @@
       <AppHeader />
 
       <!-- Main Content -->
-      <main class="min-h-[calc(100vh-4rem)] bg-gray-50 p-4 dark:bg-dark-900 md:p-6 lg:mx-2 lg:min-h-[calc(100vh-4.5rem)] lg:rounded-2xl lg:border lg:border-gray-200 lg:p-8 dark:lg:border-dark-700">
+      <main class="page-enter min-h-[calc(100vh-4rem)] bg-gray-50 p-4 dark:bg-dark-900 md:p-6 lg:mx-2 lg:min-h-[calc(100vh-4.5rem)] lg:rounded-2xl lg:border lg:border-gray-200 lg:p-8 dark:lg:border-dark-700">
         <slot />
       </main>
     </div>

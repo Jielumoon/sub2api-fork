@@ -96,7 +96,7 @@
     class="relative flex min-h-screen flex-col overflow-hidden bg-gray-50 dark:bg-dark-950"
   >
     <!-- 仅保留一层轻微的暖色背景。 -->
-    <div class="pointer-events-none absolute inset-0 bg-mesh-gradient"></div>
+    <div class="home-glow pointer-events-none absolute inset-0 bg-mesh-gradient"></div>
 
     <!-- Header -->
     <header class="relative z-20 px-6 py-4">
@@ -189,7 +189,7 @@
         <!-- Hero Section - Left/Right Layout -->
         <div class="mb-12 flex flex-col items-center justify-between gap-12 lg:flex-row lg:gap-16">
           <!-- Left: Text Content -->
-          <div class="min-w-0 flex-1 text-center lg:text-left">
+          <div class="stagger min-w-0 flex-1 text-center lg:text-left">
             <h1
               class="mb-5 font-serif text-5xl font-bold tracking-tight text-gray-900 [overflow-wrap:anywhere] dark:text-gray-100 md:text-6xl lg:text-7xl"
             >
@@ -203,10 +203,15 @@
             <div>
               <router-link
                 :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn btn-primary px-8 py-3 text-base"
+                class="btn btn-primary group px-8 py-3 text-base"
               >
                 {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
-                <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
+                <Icon
+                  name="arrowRight"
+                  size="md"
+                  class="ml-2 transition-transform duration-200 group-hover:translate-x-1"
+                  :stroke-width="2"
+                />
               </router-link>
             </div>
           </div>
@@ -250,7 +255,7 @@
         </div>
 
         <!-- Feature Tags - Centered -->
-        <div class="mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
+        <div class="stagger mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
           <div
             class="inline-flex items-center gap-2.5 rounded-full border border-gray-200 bg-white px-5 py-2.5 dark:border-dark-700 dark:bg-dark-900"
           >
@@ -278,7 +283,7 @@
         </div>
 
         <!-- Features Grid -->
-        <div class="mb-12 grid gap-6 md:grid-cols-3">
+        <div class="stagger mb-12 grid gap-6 md:grid-cols-3">
           <!-- Feature 1: Unified Gateway -->
           <div
             class="card card-hover p-6"
@@ -365,7 +370,7 @@
           </p>
         </div>
 
-        <div class="mb-16 flex flex-wrap items-center justify-center gap-4">
+        <div class="stagger mb-16 flex flex-wrap items-center justify-center gap-4">
           <!-- Claude - Supported -->
           <div
             class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 dark:border-dark-700 dark:bg-dark-800"
@@ -705,6 +710,29 @@ onMounted(() => {
   51%,
   100% {
     opacity: 0;
+  }
+}
+
+/* 背景光晕缓慢漂移，终端窗口轻微悬浮。 */
+@keyframes glow-drift {
+  to {
+    transform: translate3d(-6%, 4%, 0) scale(1.12);
+  }
+}
+
+@keyframes terminal-float {
+  to {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-glow {
+    animation: glow-drift 18s ease-in-out infinite alternate;
+  }
+
+  .terminal-window {
+    animation: terminal-float 5s ease-in-out infinite alternate;
   }
 }
 
