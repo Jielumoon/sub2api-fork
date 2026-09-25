@@ -47,9 +47,8 @@ function mountCard(item: UserMonitorView) {
     },
     global: {
       stubs: {
-        MonitorMetricPair: true,
-        MonitorAvailabilityRow: true,
-        MonitorTimeline: true,
+        MonitorStatTiles: true,
+        MonitorStatusStrip: true,
       },
     },
   })
