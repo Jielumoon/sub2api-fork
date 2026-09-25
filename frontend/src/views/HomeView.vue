@@ -93,19 +93,23 @@
   <!-- Default Home Page -->
   <div
     v-else
+    data-testid="default-home"
     class="relative flex min-h-screen flex-col overflow-hidden bg-gray-50 dark:bg-dark-950"
   >
-    <!-- 仅保留一层轻微的暖色背景。 -->
-    <div class="home-glow pointer-events-none absolute inset-0 bg-mesh-gradient"></div>
+    <!-- 仅保留一层静态的暖色背景。 -->
+    <div class="pointer-events-none absolute inset-0 bg-mesh-gradient"></div>
 
     <!-- Header -->
     <header class="relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
         <!-- Logo -->
-        <div class="flex items-center">
-          <div class="h-10 w-10 overflow-hidden rounded-xl">
+        <div class="flex min-w-0 items-center gap-3">
+          <div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl">
             <img :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
           </div>
+          <span class="hidden truncate text-base font-semibold text-gray-900 dark:text-white sm:inline">
+            {{ siteName }}
+          </span>
         </div>
 
         <!-- Nav Actions -->
@@ -184,269 +188,103 @@
     </header>
 
     <!-- Main Content -->
-    <main class="relative z-10 flex-1 px-6 py-16">
+    <main class="relative z-10 flex-1 px-6 pb-20 pt-10 sm:pt-16">
       <div class="mx-auto max-w-6xl">
-        <!-- Hero Section - Left/Right Layout -->
-        <div class="mb-12 flex flex-col items-center justify-between gap-12 lg:flex-row lg:gap-16">
-          <!-- Left: Text Content -->
-          <div class="stagger min-w-0 flex-1 text-center lg:text-left">
-            <h1
-              class="mb-5 font-serif text-5xl font-bold tracking-tight text-gray-900 [overflow-wrap:anywhere] dark:text-gray-100 md:text-6xl lg:text-7xl"
-            >
-              {{ siteName }}
-            </h1>
-            <p class="mb-8 text-lg text-gray-600 dark:text-dark-300 md:text-xl">
-              {{ siteSubtitle }}
-            </p>
-
-            <!-- CTA Button -->
-            <div>
-              <router-link
-                :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn btn-primary group px-8 py-3 text-base"
-              >
-                {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
-                <Icon
-                  name="arrowRight"
-                  size="md"
-                  class="ml-2 transition-transform duration-200 group-hover:translate-x-1"
-                  :stroke-width="2"
-                />
-              </router-link>
-            </div>
-          </div>
-
-          <!-- Right: Terminal Animation -->
-          <div class="flex min-w-0 flex-1 justify-center lg:justify-end">
-            <div class="terminal-container">
-              <div class="terminal-window">
-                <!-- Window header -->
-                <div class="terminal-header">
-                  <div class="terminal-buttons">
-                    <span class="btn-close"></span>
-                    <span class="btn-minimize"></span>
-                    <span class="btn-maximize"></span>
-                  </div>
-                  <span class="terminal-title">terminal</span>
-                </div>
-                <!-- Terminal content -->
-                <div class="terminal-body">
-                  <div class="code-line line-1">
-                    <span class="code-prompt">$</span>
-                    <span class="code-cmd">curl</span>
-                    <span class="code-flag">-X POST</span>
-                    <span class="code-url">/v1/messages</span>
-                  </div>
-                  <div class="code-line line-2">
-                    <span class="code-comment"># Routing to upstream...</span>
-                  </div>
-                  <div class="code-line line-3">
-                    <span class="code-success">200 OK</span>
-                    <span class="code-response">{ "content": "Hello!" }</span>
-                  </div>
-                  <div class="code-line line-4">
-                    <span class="code-prompt">$</span>
-                    <span class="cursor"></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Feature Tags - Centered -->
-        <div class="stagger mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200 bg-white px-5 py-2.5 dark:border-dark-700 dark:bg-dark-900"
+        <!-- 首屏：标题、入口和会话回放 -->
+        <section class="mx-auto max-w-3xl text-center">
+          <h1
+            class="font-display text-5xl font-[750] tracking-tight text-gray-900 [overflow-wrap:anywhere] dark:text-white sm:text-6xl lg:text-7xl lg:leading-[1.05]"
+            :aria-label="headlineWords ? siteSubtitle : undefined"
           >
-            <Icon name="swap" size="sm" class="text-primary-600 dark:text-primary-400" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.subscriptionToApi')
-            }}</span>
-          </div>
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200 bg-white px-5 py-2.5 dark:border-dark-700 dark:bg-dark-900"
+            <!-- 逐字弹入；拉丁单词包成一个行内块，放得下时不从中间断开，比行宽还长时仍会折行 -->
+            <span v-if="headlineWords" aria-hidden="true">
+              <template v-for="(word, w) in headlineWords" :key="w">
+                {{ w ? ' ' : '' }}<span :class="{ 'inline-block': word.group }"
+                  ><span
+                    v-for="(char, c) in word.chars"
+                    :key="c"
+                    class="home-char inline-block"
+                    :style="{ '--i': word.start + c }"
+                    >{{ char }}</span
+                  ></span
+                >
+              </template>
+            </span>
+            <template v-else>{{ siteSubtitle }}</template>
+          </h1>
+          <p
+            class="home-rise mx-auto mt-5 max-w-3xl text-lg text-gray-600 dark:text-dark-300"
+            style="--d: 0.35s"
           >
-            <Icon name="shield" size="sm" class="text-primary-600 dark:text-primary-400" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.stickySession')
-            }}</span>
-          </div>
-          <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200 bg-white px-5 py-2.5 dark:border-dark-700 dark:bg-dark-900"
-          >
-            <Icon name="chart" size="sm" class="text-primary-600 dark:text-primary-400" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
-              t('home.tags.realtimeBilling')
-            }}</span>
-          </div>
-        </div>
-
-        <!-- Features Grid -->
-        <div class="stagger mb-12 grid gap-6 md:grid-cols-3">
-          <!-- Feature 1: Unified Gateway -->
-          <div
-            class="card card-hover p-6"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-primary-600 dark:bg-dark-700 dark:text-primary-400"
-            >
-              <Icon name="server" size="lg" />
-            </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.unifiedGateway') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.unifiedGatewayDesc') }}
-            </p>
-          </div>
-
-          <!-- Feature 2: Account Pool -->
-          <div
-            class="card card-hover p-6"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-primary-600 dark:bg-dark-700 dark:text-primary-400"
-            >
-              <svg
-                class="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-                />
-              </svg>
-            </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.multiAccount') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.multiAccountDesc') }}
-            </p>
-          </div>
-
-          <!-- Feature 3: Billing & Quota -->
-          <div
-            class="card card-hover p-6"
-          >
-            <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-primary-600 dark:bg-dark-700 dark:text-primary-400"
-            >
-              <svg
-                class="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"
-                />
-              </svg>
-            </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('home.features.balanceQuota') }}
-            </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
-              {{ t('home.features.balanceQuotaDesc') }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Supported Providers -->
-        <div class="mb-8 text-center">
-          <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
-            {{ t('home.providers.title') }}
-          </h2>
-          <p class="text-sm text-gray-600 dark:text-dark-400">
-            {{ t('home.providers.description') }}
+            <!-- 两句各自成块，只在句间换行，避免末尾掉下一两个字 -->
+            <span class="inline-block">{{ t('home.hero.description', { siteName }) }}</span>
+            {{ ' ' }}
+            <span class="inline-block">{{ t('home.hero.hint') }}</span>
           </p>
-        </div>
+          <div class="home-rise mt-8 flex flex-wrap items-center justify-center gap-3" style="--d: 0.5s">
+            <router-link v-if="isAuthenticated" :to="dashboardPath" class="btn btn-primary px-6 py-2.5 text-base">
+              {{ t('home.goToDashboard') }}
+            </router-link>
+            <template v-else>
+              <router-link v-if="registrationEnabled" to="/register" class="btn btn-primary px-6 py-2.5 text-base">
+                {{ t('home.register') }}
+              </router-link>
+              <router-link
+                to="/login"
+                class="btn px-6 py-2.5 text-base"
+                :class="registrationEnabled ? 'btn-secondary' : 'btn-primary'"
+              >
+                {{ t('home.login') }}
+              </router-link>
+            </template>
+          </div>
+        </section>
 
-        <div class="stagger mb-16 flex flex-wrap items-center justify-center gap-4">
-          <!-- Claude - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 dark:border-dark-700 dark:bg-dark-800"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-500"
-            >
-              <span class="text-xs font-bold text-white">C</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.claude') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
+        <HomeSessionReplay class="mx-auto mt-12 max-w-3xl" :base-url="apiBaseUrl" />
+
+        <!-- 三步接入与客户端配置 -->
+        <section class="mt-24 grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <div>
+            <h2 class="font-display text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+              {{ t('home.steps.title') }}
+            </h2>
+            <!-- 滚动到这里时依次点亮编号、画出连线：这是一个有先后顺序的流程 -->
+            <ol ref="stepsList" class="home-steps mt-8 space-y-8" :class="{ 'is-shown': stepsShown }">
+              <li
+                v-for="(step, index) in steps"
+                :key="step.key"
+                class="relative flex gap-4"
+                :style="{ '--i': index }"
+              >
+                <span
+                  v-if="index < steps.length - 1"
+                  class="step-line absolute -bottom-8 left-4 top-9 w-px bg-primary-300 dark:bg-primary-800"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="step-num relative grid h-8 w-8 shrink-0 place-items-center rounded-full border border-primary-600 bg-primary-600 font-code text-sm font-semibold text-white"
+                >
+                  {{ index + 1 }}
+                </span>
+                <div class="step-body min-w-0 pt-1">
+                  <h3 class="font-semibold text-gray-900 dark:text-white">{{ step.title }}</h3>
+                  <p class="mt-1 text-sm leading-relaxed text-gray-600 dark:text-dark-400">{{ step.description }}</p>
+                  <router-link
+                    v-if="step.action"
+                    :to="step.action.to"
+                    class="mt-2 inline-flex text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline dark:text-primary-400 dark:hover:text-primary-300"
+                  >
+                    {{ step.action.label }}
+                  </router-link>
+                </div>
+              </li>
+            </ol>
           </div>
-          <!-- GPT - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 dark:border-dark-700 dark:bg-dark-800"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-green-600"
-            >
-              <span class="text-xs font-bold text-white">G</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">GPT</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
+          <div>
+            <HomeConnectPanel :base-url="apiBaseUrl" />
+            <p class="mt-3 text-sm text-gray-500 dark:text-dark-400">{{ t('home.connect.fullConfig') }}</p>
           </div>
-          <!-- Gemini - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 dark:border-dark-700 dark:bg-dark-800"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600"
-            >
-              <span class="text-xs font-bold text-white">G</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.gemini') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- Antigravity - Supported -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 dark:border-dark-700 dark:bg-dark-800"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-600"
-            >
-              <span class="text-xs font-bold text-white">A</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.antigravity') }}</span>
-            <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-              >{{ t('home.providers.supported') }}</span
-            >
-          </div>
-          <!-- More - Coming Soon -->
-          <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-100 px-5 py-3 dark:border-dark-700 dark:bg-dark-900"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gray-500 to-gray-600"
-            >
-              <span class="text-xs font-bold text-white">+</span>
-            </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.more') }}</span>
-            <span
-              class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-dark-700 dark:text-dark-400"
-              >{{ t('home.providers.soon') }}</span
-            >
-          </div>
-        </div>
+        </section>
       </div>
     </main>
 
@@ -485,10 +323,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useIntersectionObserver } from '@vueuse/core'
+import '@fontsource-variable/bricolage-grotesque'
+import '@fontsource-variable/jetbrains-mono'
 import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { sanitizeUrl } from '@/utils/url'
+import HomeConnectPanel from '@/components/home/HomeConnectPanel.vue'
+import HomeSessionReplay from '@/components/home/HomeSessionReplay.vue'
+import { sanitizeUrl, toApiRoot } from '@/utils/url'
 import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 
 const { t } = useI18n()
@@ -505,6 +348,9 @@ const homeContent = computed(() => appStore.cachedPublicSettings?.home_content |
 const hasHomeContent = computed(() => homeContent.value.trim().length > 0)
 const compactHomeEnabled = computed(() => appStore.cachedPublicSettings?.compact_home_enabled === true)
 const modelPlazaEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.modelPlaza))
+const registrationEnabled = computed(() => appStore.cachedPublicSettings?.registration_enabled === true)
+// 与密钥页一致：优先后台配置的 API 地址，否则用当前域名。
+const apiBaseUrl = computed(() => toApiRoot(appStore.cachedPublicSettings?.api_base_url || window.location.origin))
 
 // Check if homeContent is a URL (for iframe display)
 const isHomeContentUrl = computed(() => {
@@ -533,6 +379,72 @@ const userInitial = computed(() => {
   if (!user || !user.email) return ''
   return user.email.charAt(0).toUpperCase()
 })
+
+// 中日韩文字逐字换行，不把整段包成一个块。
+const CJK = /[\u3000-\u9fff\uff00-\uffef]/
+// 连写或会重排字形的文字（希伯来、阿拉伯、天城文、泰文等）拆成独立行内块会断开字形，这类标题直接显示整句。
+const SHAPED_SCRIPT = /[\u0590-\u08ff\u0900-\u0dff\u0e00-\u0eff\u1000-\u109f\u1780-\u17ff\ufb1d-\ufdff\ufe70-\ufeff]/
+
+// 按字素拆分，保证 emoji、组合重音不被拆开。
+function graphemes(text: string): string[] {
+  if (typeof Intl.Segmenter !== 'function') return Array.from(text)
+  return Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text), (part) => part.segment)
+}
+
+const headlineWords = computed(() => {
+  if (SHAPED_SCRIPT.test(siteSubtitle.value)) return null
+  let start = 0
+  return siteSubtitle.value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => {
+      const chars = graphemes(word)
+      const item = { chars, start, group: !CJK.test(word) }
+      start += chars.length
+      return item
+    })
+})
+
+const stepsList = ref<HTMLElement | null>(null)
+const stepsShown = ref(false)
+const { isSupported: stepsObservable, stop: stopStepsObserver } = useIntersectionObserver(
+  stepsList,
+  ([entry]) => {
+    if (!entry?.isIntersecting) return
+    stepsShown.value = true
+    stopStepsObserver()
+  },
+  { threshold: 0.35 }
+)
+if (!stepsObservable.value) stepsShown.value = true
+
+const steps = computed(() => [
+  {
+    key: 'account',
+    // 关闭注册时整步改成"登录"，不留任何注册字样。
+    title: registrationEnabled.value ? t('home.steps.account.title') : t('home.steps.account.loginTitle'),
+    description: registrationEnabled.value
+      ? t('home.steps.account.description')
+      : t('home.steps.account.loginDescription'),
+    action: isAuthenticated.value
+      ? null
+      : registrationEnabled.value
+        ? { to: '/register', label: t('home.steps.account.register') }
+        : { to: '/login', label: t('home.steps.account.login') },
+  },
+  {
+    key: 'key',
+    title: t('home.steps.key.title'),
+    description: t('home.steps.key.description'),
+    action: { to: '/keys', label: t('home.steps.key.action') },
+  },
+  {
+    key: 'paste',
+    title: t('home.steps.paste.title'),
+    description: t('home.steps.paste.description'),
+    action: null,
+  },
+])
 
 // Current year for footer
 const currentYear = computed(() => new Date().getFullYear())
@@ -570,180 +482,84 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Terminal Container */
-.terminal-container {
-  position: relative;
-  display: inline-block;
+/* 首屏唯一一段编排动效：标题逐字弹入 → 说明与按钮 → 终端窗口（在 HomeSessionReplay 里）。 */
+@media (prefers-reduced-motion: no-preference) {
+  .home-char {
+    animation: home-char-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    animation-delay: calc(var(--i) * 40ms + 80ms);
+    transition:
+      transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+      color 0.2s ease;
+  }
+
+  .home-char:hover {
+    transform: translateY(-0.12em) rotate(-5deg);
+    color: theme('colors.primary.600');
+  }
+
+  /* 不能写 :global(.dark)：Vue 会把整条选择器编译成裸的 .dark。 */
+  .dark .home-char:hover {
+    color: theme('colors.primary.400');
+  }
+
+  .home-rise {
+    animation: home-rise 0.7s ease-out backwards;
+    animation-delay: var(--d);
+  }
+
+  /* 默认即最终样子；只有支持动效且还没滚到时才处于"未点亮"状态。 */
+  .home-steps .step-num,
+  .home-steps .step-line,
+  .home-steps .step-body {
+    transition:
+      background-color 0.4s ease,
+      border-color 0.4s ease,
+      color 0.4s ease,
+      opacity 0.5s ease,
+      transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
+    transition-delay: calc(var(--i) * 350ms);
+  }
+
+  .home-steps .step-line {
+    transform-origin: top;
+    transition-delay: calc(var(--i) * 350ms + 200ms);
+  }
+
+  .home-steps:not(.is-shown) .step-num {
+    border-color: theme('colors.gray.300');
+    background-color: theme('colors.white');
+    color: theme('colors.gray.500');
+    transform: scale(0.85);
+  }
+
+  .dark .home-steps:not(.is-shown) .step-num {
+    border-color: theme('colors.dark.600');
+    background-color: theme('colors.dark.900');
+    color: theme('colors.dark.400');
+  }
+
+  .home-steps:not(.is-shown) .step-line {
+    transform: scaleY(0);
+  }
+
+  .home-steps:not(.is-shown) .step-body {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
 }
 
-/* Terminal Window */
-.terminal-window {
-  width: min(420px, calc(100vw - 3rem));
-  background: theme('colors.dark.900');
-  border: 1px solid theme('colors.dark.700');
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-/* Terminal Header */
-.terminal-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  background: theme('colors.dark.800');
-  border-bottom: 1px solid theme('colors.dark.700');
-}
-
-.terminal-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.terminal-buttons span {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.btn-close {
-  background: #ef4444;
-}
-.btn-minimize {
-  background: #eab308;
-}
-.btn-maximize {
-  background: #22c55e;
-}
-
-.terminal-title {
-  flex: 1;
-  text-align: center;
-  font-size: 12px;
-  font-family: ui-monospace, monospace;
-  color: theme('colors.dark.400');
-  margin-right: 52px;
-}
-
-/* Terminal Body */
-.terminal-body {
-  padding: 20px 24px;
-  font-family: theme('fontFamily.mono');
-  font-size: 14px;
-  line-height: 2;
-}
-
-.code-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  opacity: 0;
-  animation: line-appear 0.5s ease forwards;
-}
-
-.line-1 {
-  animation-delay: 0.3s;
-}
-.line-2 {
-  animation-delay: 1s;
-}
-.line-3 {
-  animation-delay: 1.8s;
-}
-.line-4 {
-  animation-delay: 2.5s;
-}
-
-@keyframes line-appear {
+@keyframes home-char-in {
   from {
     opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0.45em) rotate(8deg);
+    filter: blur(8px);
   }
 }
 
-.code-prompt {
-  color: #22c55e;
-  font-weight: bold;
-}
-.code-cmd {
-  color: #38bdf8;
-}
-.code-flag {
-  color: #a78bfa;
-}
-.code-url {
-  color: theme('colors.primary.400');
-}
-.code-comment {
-  color: theme('colors.dark.400');
-  font-style: italic;
-}
-.code-success {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.15);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-.code-response {
-  color: #fbbf24;
-}
-
-/* Blinking Cursor */
-.cursor {
-  display: inline-block;
-  width: 8px;
-  height: 16px;
-  background: #22c55e;
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-  0%,
-  50% {
-    opacity: 1;
-  }
-  51%,
-  100% {
+@keyframes home-rise {
+  from {
     opacity: 0;
-  }
-}
-
-/* 背景光晕缓慢漂移，终端窗口轻微悬浮。 */
-@keyframes glow-drift {
-  to {
-    transform: translate3d(-6%, 4%, 0) scale(1.12);
-  }
-}
-
-@keyframes terminal-float {
-  to {
-    transform: translateY(-6px);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .home-glow {
-    animation: glow-drift 18s ease-in-out infinite alternate;
-  }
-
-  .terminal-window {
-    animation: terminal-float 5s ease-in-out infinite alternate;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .code-line {
-    animation: none;
-    opacity: 1;
-  }
-
-  .cursor {
-    animation: none;
+    transform: translateY(12px);
   }
 }
 </style>

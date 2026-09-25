@@ -12,16 +12,10 @@ export default {
     switchToDark: '切换到深色模式',
     dashboard: '控制台',
     login: '登录',
-    getStarted: '立即开始',
     goToDashboard: '进入控制台',
     // 新增：面向用户的价值主张
     heroSubtitle: '一个密钥，畅用多个 AI 模型',
     heroDescription: '无需管理多个订阅账号，一站式接入 Claude、GPT、Gemini 等主流 AI 服务',
-    tags: {
-      subscriptionToApi: '订阅转 API',
-      stickySession: '会话保持',
-      realtimeBilling: '按量计费'
-    },
     // 用户痛点区块
     painPoints: {
       title: '你是否也遇到这些问题？',
@@ -48,14 +42,6 @@ export default {
     solutions: {
       title: '我们帮你解决',
       subtitle: '简单三步，开始省心使用 AI'
-    },
-    features: {
-      unifiedGateway: '一键接入',
-      unifiedGatewayDesc: '获取一个 API 密钥，即可调用所有已接入的 AI 模型，无需分别申请。',
-      multiAccount: '稳定可靠',
-      multiAccountDesc: '智能调度多个上游账号，自动切换和负载均衡，告别频繁报错。',
-      balanceQuota: '用多少付多少',
-      balanceQuotaDesc: '按实际使用量计费，支持设置配额上限，团队用量一目了然。'
     },
     // 优势对比
     comparison: {
@@ -93,21 +79,50 @@ export default {
         }
       }
     },
-    providers: {
-      title: '已支持的 AI 模型',
-      description: '一个 API，多种选择',
-      supported: '已支持',
-      soon: '即将推出',
-      claude: 'Claude',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
-      more: '更多'
-    },
     // CTA 区块
     cta: {
       title: '准备好开始了吗？',
       description: '注册即可获得免费试用额度，体验一站式 AI 服务',
       button: '免费注册'
+    },
+    register: '注册',
+    hero: {
+      description: '把 Claude Code、Codex、Gemini CLI 接到 {siteName}。',
+      hint: '换一个地址，填上密钥就能用。'
+    },
+    replay: {
+      ariaLabel: '演示：在 Claude Code 里经 {host} 完成一次代码修改',
+      prompt: '把首页改得不那么千篇一律',
+      reply: '首页换成了会话回放和接入台，旧的卖点卡片删掉了。',
+      replay: '重播'
+    },
+    steps: {
+      title: '三步接入',
+      account: {
+        title: '注册账号',
+        description: '用邮箱注册并登录，进入控制台。',
+        register: '去注册',
+        login: '去登录',
+        loginTitle: '登录账号',
+        loginDescription: '用已有账号登录控制台。'
+      },
+      key: {
+        title: '创建密钥',
+        description: '在「API 密钥」页新建密钥，选好要用的分组。',
+        action: '打开 API 密钥页'
+      },
+      paste: {
+        title: '配置客户端',
+        description: '换上你的密钥：环境变量在当前终端执行，配置文件保存到对应路径，然后启动客户端。'
+      }
+    },
+    connect: {
+      clients: '客户端',
+      copy: '复制',
+      copied: '已复制',
+      copySuccess: '配置已复制',
+      keyPlaceholder: '你的 API 密钥',
+      fullConfig: 'Windows、settings.json 等完整配置，登录后可以在「API 密钥」页一键复制。'
     },
     footer: {
       allRightsReserved: '保留所有权利。'

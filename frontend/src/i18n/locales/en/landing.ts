@@ -12,16 +12,10 @@ export default {
     switchToDark: 'Switch to Dark Mode',
     dashboard: 'Dashboard',
     login: 'Login',
-    getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
     heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
-    tags: {
-      subscriptionToApi: 'Subscription to API',
-      stickySession: 'Session Persistence',
-      realtimeBilling: 'Pay As You Go'
-    },
     // Pain points section
     painPoints: {
       title: 'Sound Familiar?',
@@ -48,14 +42,6 @@ export default {
     solutions: {
       title: 'We Solve These Problems',
       subtitle: 'Three simple steps to stress-free AI access'
-    },
-    features: {
-      unifiedGateway: 'One-Click Access',
-      unifiedGatewayDesc: 'Get a single API key to call all connected AI models. No separate applications needed.',
-      multiAccount: 'Always Reliable',
-      multiAccountDesc: 'Smart routing across multiple upstream accounts with automatic failover. Say goodbye to errors.',
-      balanceQuota: 'Pay What You Use',
-      balanceQuotaDesc: 'Usage-based billing with quota limits. Full visibility into team consumption.'
     },
     // Comparison section
     comparison: {
@@ -93,21 +79,50 @@ export default {
         }
       }
     },
-    providers: {
-      title: 'Supported AI Models',
-      description: 'One API, Multiple Choices',
-      supported: 'Supported',
-      soon: 'Soon',
-      claude: 'Claude',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
-      more: 'More'
-    },
     // CTA section
     cta: {
       title: 'Ready to Get Started?',
       description: 'Sign up now and get free trial credits to experience seamless AI access',
       button: 'Sign Up Free'
+    },
+    register: 'Sign up',
+    hero: {
+      description: 'Point Claude Code, Codex or Gemini CLI at {siteName}.',
+      hint: 'Change one URL, add your key, and you are set.'
+    },
+    replay: {
+      ariaLabel: 'Demo: a Claude Code session routed through {host} making a code change',
+      prompt: 'make the home page look less like a template',
+      reply: 'The home page now has a session replay and a setup panel; the old feature cards are gone.',
+      replay: 'Replay'
+    },
+    steps: {
+      title: 'Connect in three steps',
+      account: {
+        title: 'Create an account',
+        description: 'Sign up with your email and log in to the console.',
+        register: 'Sign up',
+        login: 'Log in',
+        loginTitle: 'Log in',
+        loginDescription: 'Log in to the console with your existing account.'
+      },
+      key: {
+        title: 'Create a key',
+        description: 'Add a key on the API Keys page and pick the group you want to use.',
+        action: 'Open API Keys'
+      },
+      paste: {
+        title: 'Configure your client',
+        description: 'Swap in your key: run the environment variables in your current terminal or save the files to the paths shown, then start the client.'
+      }
+    },
+    connect: {
+      clients: 'Clients',
+      copy: 'Copy',
+      copied: 'Copied',
+      copySuccess: 'Config copied',
+      keyPlaceholder: 'YOUR_API_KEY',
+      fullConfig: 'Full configs for Windows, settings.json and more are one click away on the API Keys page after you log in.'
     },
     footer: {
       allRightsReserved: 'All rights reserved.'

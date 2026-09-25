@@ -68,7 +68,11 @@ export default {
         // 不前置 ui-serif，避免中文被系统衬线字体提前接管。
         serif: ['Georgia', 'Cambria', 'Times New Roman', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
         // 中文补在通用 monospace 之前，否则 Windows 上等宽文本里的中文会退到宋体。
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'PingFang SC', 'Microsoft YaHei', 'monospace']
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'PingFang SC', 'Microsoft YaHei', 'monospace'],
+        // 首页用的自托管字体（只含拉丁字符，中文照常落到后面的系统字体）。@font-face 由 HomeView import，
+        // 构建时会并入全局 vendor CSS，但只是声明；只有用到 font-display / font-code 的元素才会触发下载。
+        display: ['Bricolage Grotesque Variable', 'system-ui', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+        code: ['JetBrains Mono Variable', 'ui-monospace', 'Menlo', 'Consolas', 'PingFang SC', 'Microsoft YaHei', 'monospace']
       },
       boxShadow: {
         glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
