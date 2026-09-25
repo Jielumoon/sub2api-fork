@@ -67,7 +67,8 @@ export default {
         ],
         // 不前置 ui-serif，避免中文被系统衬线字体提前接管。
         serif: ['Georgia', 'Cambria', 'Times New Roman', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+        // 中文补在通用 monospace 之前，否则 Windows 上等宽文本里的中文会退到宋体。
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'PingFang SC', 'Microsoft YaHei', 'monospace']
       },
       boxShadow: {
         glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
