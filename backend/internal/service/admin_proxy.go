@@ -85,6 +85,9 @@ func (s *adminServiceImpl) CreateProxy(ctx context.Context, input *CreateProxyIn
 		BackupProxyID:  input.BackupProxyID,
 		ExpiryWarnDays: input.ExpiryWarnDays,
 	}
+	if err := validateProxyUsernameTemplate(proxy); err != nil {
+		return nil, err
+	}
 	if err := s.proxyRepo.Create(ctx, proxy); err != nil {
 		return nil, err
 	}
@@ -151,11 +154,22 @@ func (s *adminServiceImpl) UpdateProxy(ctx context.Context, id int64, input *Upd
 	if input.ExpiryWarnDays != nil {
 		proxy.ExpiryWarnDays = *input.ExpiryWarnDays
 	}
+	if err := validateProxyUsernameTemplate(proxy); err != nil {
+		return nil, err
+	}
 
 	if err := s.proxyRepo.Update(ctx, proxy); err != nil {
 		return nil, err
 	}
 	return proxy, nil
+}
+
+// validateProxyUsernameTemplate 要求用户名模板必须配密码：URL() 在密码为空时不带认证，模板会静默失效。
+func validateProxyUsernameTemplate(p *Proxy) error {
+	if p.HasAccountPlaceholder() && p.Password == "" {
+		return infraerrors.BadRequest("PROXY_TEMPLATE_PASSWORD_REQUIRED", "proxy password is required when username contains {account_id}")
+	}
+	return nil
 }
 
 func (s *adminServiceImpl) DeleteProxy(ctx context.Context, id int64) error {

@@ -289,7 +289,7 @@ func (s *AntigravityOAuthService) RefreshAccountToken(ctx context.Context, accou
 	if account.ProxyID != nil {
 		proxy, err := s.proxyRepo.GetByID(ctx, *account.ProxyID)
 		if err == nil && proxy != nil {
-			proxyURL = proxy.URL()
+			proxyURL = proxy.ForAccount(account).URL()
 		}
 	}
 
@@ -445,7 +445,7 @@ func (s *AntigravityOAuthService) FillProjectID(ctx context.Context, account *Ac
 	if account.ProxyID != nil {
 		proxy, err := s.proxyRepo.GetByID(ctx, *account.ProxyID)
 		if err == nil && proxy != nil {
-			proxyURL = proxy.URL()
+			proxyURL = proxy.ForAccount(account).URL()
 		}
 	}
 	result, err := s.loadProjectIDWithRetry(ctx, accessToken, proxyURL, 3)

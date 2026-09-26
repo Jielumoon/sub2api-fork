@@ -127,6 +127,7 @@ export default {
       status: '状态',
       enterProxyName: '请输入代理名称',
       optionalAuth: '可选认证信息',
+      usernameTemplateHint: '可用 {id} 按账号替换成账号 ID，一条代理挂多个账号时各自固定出口 IP（Resin 填 {example}）。',
       leaveEmptyToKeep: '留空保持不变',
       form: {
         hostPlaceholder: '请输入主机地址',
@@ -219,6 +220,7 @@ export default {
       nameRequired: '请输入代理名称',
       hostRequired: '请输入主机地址',
       portInvalid: '端口必须在 1-65535 之间',
+      templatePasswordRequired: '用户名含 {id} 时必须填写密码（Resin 未设代理密码时可随便填）',
       deleteConfirm: "确定要删除代理 '{name}' 吗？使用此代理的账号将被移除代理设置。",
       neverExpires: '永不过期',
       expired: '已过期',

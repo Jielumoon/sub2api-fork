@@ -573,6 +573,42 @@ func TestOAuthService_RefreshAccountToken_WithProxy(t *testing.T) {
 	}
 }
 
+// 直接按 ProxyID 查代理的路径也要按账号渲染用户名模板，否则刷新 token 时会走随机出口。
+func TestOAuthService_RefreshAccountToken_RendersProxyUsernameTemplate(t *testing.T) {
+	t.Parallel()
+
+	proxyRepo := &mockProxyRepoForOAuth{
+		getByIDFunc: func(ctx context.Context, id int64) (*Proxy, error) {
+			return &Proxy{Protocol: "http", Host: "resin", Port: 2260, Username: "Default.{account_id}", Password: "token"}, nil
+		},
+	}
+	var gotProxyURL string
+	client := &mockClaudeOAuthClient{
+		refreshTokenFunc: func(ctx context.Context, refreshToken, proxyURL string) (*oauth.TokenResponse, error) {
+			gotProxyURL = proxyURL
+			return &oauth.TokenResponse{AccessToken: "refreshed", ExpiresIn: 3600}, nil
+		},
+	}
+
+	svc := NewOAuthService(proxyRepo, client)
+	defer svc.Stop()
+
+	proxyID := int64(10)
+	account := &Account{
+		ID:          42,
+		Platform:    PlatformAnthropic,
+		Type:        AccountTypeOAuth,
+		ProxyID:     &proxyID,
+		Credentials: map[string]any{"refresh_token": "rt"},
+	}
+	if _, err := svc.RefreshAccountToken(context.Background(), account); err != nil {
+		t.Fatalf("RefreshAccountToken 返回错误: %v", err)
+	}
+	if gotProxyURL != "http://Default.42:token@resin:2260" {
+		t.Fatalf("proxyURL 未按账号渲染: got=%q", gotProxyURL)
+	}
+}
+
 func TestOAuthService_ExchangeCode_NilOrg(t *testing.T) {
 	t.Parallel()
 

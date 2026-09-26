@@ -149,6 +149,7 @@ export default {
       enterProxyName: 'Enter proxy name',
       leaveEmptyToKeep: 'Leave empty to keep current',
       optionalAuth: 'Optional authentication',
+      usernameTemplateHint: 'Use {id} to render the account ID into the username, so every account sharing this proxy keeps its own exit IP (Resin: {example}).',
       form: {
         hostPlaceholder: 'proxy.example.com',
         portPlaceholder: '8080'
@@ -220,6 +221,7 @@ export default {
       nameRequired: 'Please enter proxy name',
       hostRequired: 'Please enter host address',
       portInvalid: 'Port must be between 1-65535',
+      templatePasswordRequired: 'Password is required when the username contains {id} (any value works if Resin has no proxy token)',
       deleteConfirm:
         "Are you sure you want to delete '{name}'? Accounts using this proxy will have their proxy removed.",
       neverExpires: 'Never',

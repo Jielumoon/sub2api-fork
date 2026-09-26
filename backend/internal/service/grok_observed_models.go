@@ -109,7 +109,7 @@ func (s *GrokQuotaService) syncGrokObservedModels(ctx context.Context, account *
 	proxyURL := ""
 	if s.proxyRepo != nil && account.ProxyID != nil {
 		if p, err := s.proxyRepo.GetByID(ctx, *account.ProxyID); err == nil && p != nil {
-			proxyURL = p.URL()
+			proxyURL = p.ForAccount(account).URL()
 		}
 	}
 	if s.httpUpstream == nil {

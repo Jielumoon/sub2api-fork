@@ -313,7 +313,7 @@ func (s *OAuthService) RefreshAccountToken(ctx context.Context, account *Account
 	if account.ProxyID != nil {
 		proxy, err := s.proxyRepo.GetByID(ctx, *account.ProxyID)
 		if err == nil && proxy != nil {
-			proxyURL = proxy.URL()
+			proxyURL = proxy.ForAccount(account).URL()
 		}
 	}
 

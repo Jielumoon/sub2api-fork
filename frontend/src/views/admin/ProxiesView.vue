@@ -473,6 +473,7 @@
             class="input"
             :placeholder="t('admin.proxies.optionalAuth')"
           />
+          <p class="input-hint">{{ t('admin.proxies.usernameTemplateHint', usernameTemplateParams) }}</p>
         </div>
         <div>
           <label class="input-label">{{ t('admin.proxies.password') }}</label>
@@ -701,6 +702,7 @@
         <div>
           <label class="input-label">{{ t('admin.proxies.username') }}</label>
           <input v-model="editForm.username" type="text" class="input" />
+          <p class="input-hint">{{ t('admin.proxies.usernameTemplateHint', usernameTemplateParams) }}</p>
         </div>
         <div>
           <label class="input-label">{{ t('admin.proxies.password') }}</label>
@@ -1376,6 +1378,11 @@ const handleBatchCreate = async () => {
   }
 }
 
+// 代理用户名占位符，与后端 service.ProxyPlaceholderAccountID 保持一致。
+// 花括号会被 vue-i18n 当成插值，所以作为参数传给文案。
+const usernameTemplateParams = { id: '{account_id}', example: 'Default.{account_id}' }
+const hasAccountPlaceholder = (username: string) => username.includes(usernameTemplateParams.id)
+
 const handleCreateProxy = async () => {
   if (!createForm.name.trim()) {
     appStore.showError(t('admin.proxies.nameRequired'))
@@ -1387,6 +1394,10 @@ const handleCreateProxy = async () => {
   }
   if (createForm.port < 1 || createForm.port > 65535) {
     appStore.showError(t('admin.proxies.portInvalid'))
+    return
+  }
+  if (hasAccountPlaceholder(createForm.username) && !createForm.password.trim()) {
+    appStore.showError(t('admin.proxies.templatePasswordRequired', usernameTemplateParams))
     return
   }
   submitting.value = true
@@ -1451,6 +1462,11 @@ const handleUpdateProxy = async () => {
   }
   if (editForm.port < 1 || editForm.port > 65535) {
     appStore.showError(t('admin.proxies.portInvalid'))
+    return
+  }
+  // 编辑表单会回填现有密码，未改动时 editForm.password 就是当前密码
+  if (hasAccountPlaceholder(editForm.username) && !editForm.password.trim()) {
+    appStore.showError(t('admin.proxies.templatePasswordRequired', usernameTemplateParams))
     return
   }
 

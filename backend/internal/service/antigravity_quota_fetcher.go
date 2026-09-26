@@ -215,7 +215,7 @@ func (f *AntigravityQuotaFetcher) GetProxyURL(ctx context.Context, account *Acco
 	if err != nil || proxy == nil {
 		return ""
 	}
-	return proxy.URL()
+	return proxy.ForAccount(account).URL()
 }
 
 // classifyForbiddenType 根据 403 响应体判断禁止类型

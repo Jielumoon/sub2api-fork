@@ -83,7 +83,7 @@ func (s *GrokOAuthService) GenerateAuthURL(ctx context.Context, proxyID *int64, 
 		return nil, infraerrors.Newf(http.StatusInternalServerError, "GROK_OAUTH_SESSION_FAILED", "failed to generate session ID: %v", err)
 	}
 
-	proxyURL, err := s.proxyURL(ctx, proxyID)
+	proxyURL, err := s.proxyURL(ctx, proxyID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (s *GrokOAuthService) ExchangeCode(ctx context.Context, input *GrokExchange
 	proxyURL := session.ProxyURL
 	if input.ProxyID != nil {
 		var err error
-		proxyURL, err = s.proxyURL(ctx, input.ProxyID)
+		proxyURL, err = s.proxyURL(ctx, input.ProxyID, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +228,7 @@ func (s *GrokOAuthService) RefreshToken(ctx context.Context, refreshToken, proxy
 }
 
 func (s *GrokOAuthService) ValidateRefreshToken(ctx context.Context, refreshToken string, proxyID *int64) (*GrokTokenInfo, error) {
-	proxyURL, err := s.proxyURL(ctx, proxyID)
+	proxyURL, err := s.proxyURL(ctx, proxyID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func (s *GrokOAuthService) ValidateSSOToken(ctx context.Context, ssoToken string
 	if err := s.requireOAuthClient(); err != nil {
 		return nil, err
 	}
-	proxyURL, err := s.proxyURL(ctx, proxyID)
+	proxyURL, err := s.proxyURL(ctx, proxyID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (s *GrokOAuthService) AuthorizePassword(ctx context.Context, email, passwor
 	if err := s.requireOAuthClient(); err != nil {
 		return nil, err
 	}
-	proxyURL, err := s.proxyURL(ctx, proxyID)
+	proxyURL, err := s.proxyURL(ctx, proxyID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +316,7 @@ func (s *GrokOAuthService) RefreshAccountToken(ctx context.Context, account *Acc
 		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_INVALID_ACCOUNT_TYPE", "account is not an OAuth account")
 	}
 
-	proxyURL, err := s.proxyURL(ctx, account.ProxyID)
+	proxyURL, err := s.proxyURL(ctx, account.ProxyID, account)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +432,8 @@ func (s *GrokOAuthService) tokenInfoFromResponse(tokenResp *xai.TokenResponse, c
 	return info
 }
 
-func (s *GrokOAuthService) proxyURL(ctx context.Context, proxyID *int64) (string, error) {
+// proxyURL 查代理并按 account 渲染用户名模板；授权阶段还没有账号时传 nil。
+func (s *GrokOAuthService) proxyURL(ctx context.Context, proxyID *int64, account *Account) (string, error) {
 	if proxyID == nil {
 		return "", nil
 	}
@@ -449,7 +450,7 @@ func (s *GrokOAuthService) proxyURL(ctx context.Context, proxyID *int64) (string
 	if proxy == nil {
 		return "", infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_PROXY_NOT_FOUND", "configured proxy was not found")
 	}
-	return proxy.URL(), nil
+	return proxy.ForAccount(account).URL(), nil
 }
 
 func applyGrokTokenClaims(info *GrokTokenInfo, token string, includeTier bool) {

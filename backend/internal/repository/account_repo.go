@@ -333,7 +333,7 @@ func (r *accountRepository) GetByIDs(ctx context.Context, ids []int64) ([]*servi
 
 		// Prefer the preloaded proxy edge when available.
 		if entAcc.Edges.Proxy != nil {
-			out.Proxy = proxyEntityToService(entAcc.Edges.Proxy)
+			out.Proxy = proxyEntityToService(entAcc.Edges.Proxy).ForAccount(out)
 		}
 
 		if groups, ok := groupsByAccount[entAcc.ID]; ok {
@@ -2957,6 +2957,8 @@ func lockAndMatchProbeProxyIdentity(ctx context.Context, client *dbent.Client, a
 	if err := rows.Scan(&current.protocol, &current.host, &current.port, &current.username, &current.password, &current.status); err != nil {
 		return false, err
 	}
+	// account.Proxy 的用户名已按账号渲染过模板，库里存的是模板原文，比较前按同一账号渲染。
+	current.username = service.RenderProxyUsername(current.username, account)
 	return current == proxyProbeIdentityFromService(account.Proxy), rows.Err()
 }
 
@@ -3401,7 +3403,8 @@ func (r *accountRepository) accountsToService(ctx context.Context, accounts []*d
 		}
 		if acc.ProxyID != nil {
 			if proxy, ok := proxyMap[*acc.ProxyID]; ok {
-				out.Proxy = proxy
+				// proxyMap 里的代理被同批账号共享，ForAccount 按账号渲染出独立副本。
+				out.Proxy = proxy.ForAccount(out)
 			}
 		}
 		out.ProxyFallbackOriginID = acc.ProxyFallbackOriginID
