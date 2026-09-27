@@ -640,31 +640,92 @@ export default {
   // Model Plaza (public group/model pricing showcase)
   modelPlaza: {
     title: 'Model Plaza',
-    description: 'Browse available models and pricing by group',
+    searchPlaceholder: 'Search models',
+    clearSearch: 'Clear search',
     loading: 'Loading...',
-    empty: 'No groups to display',
+    empty: 'No models to display',
     loadFailed: 'Failed to load model plaza',
     noSearchResult: 'No matching models',
     anonymousHint: 'Sign in to see your exclusive groups and personal rates',
     filters: {
-      platformLabel: 'Platform',
-      groupLabel: 'Group',
-      rateLabel: 'Rate',
-      modelLabel: 'Model',
-      searchPlaceholder: 'Search models',
-      all: 'All'
+      title: 'Filters',
+      reset: 'Reset',
+      clearAll: 'Clear all filters',
+      all: 'All',
+      platform: 'Platform',
+      group: 'Group',
+      billing: 'Billing'
+    },
+    billing: {
+      token: 'Token',
+      per_request: 'Per request',
+      image: 'Image',
+      video: 'Video'
+    },
+    sort: {
+      label: 'Sort',
+      default: 'Default',
+      name: 'Name',
+      priceAsc: 'Price: low to high',
+      priceDesc: 'Price: high to low'
+    },
+    view: {
+      label: 'View',
+      card: 'Card view',
+      table: 'Table view'
+    },
+    toolbar: {
+      models: 'models'
+    },
+    card: {
+      moreGroups: '+{count} more',
+      groups: 'Groups: {count}',
+      copyName: 'Copy model name',
+      copied: 'Model name copied'
+    },
+    discount: {
+      off: '{percent}% off',
+      upTo: 'Up to'
+    },
+    price: {
+      original: 'Original price',
+      perMillion: 'USD per 1M tokens'
     },
     badges: {
       exclusive: 'Exclusive',
-      subscription: 'Subscription'
+      subscription: 'Subscription',
+      tiered: 'Tiered',
+      timePricing: 'Time-based',
+      reasoning: 'Reasoning multipliers'
+    },
+    drawer: {
+      lowestIn: 'Lowest price in {group}',
+      priceIn: 'Price in {group}',
+      lowestBadge: 'Lowest',
+      official: 'Official reference price',
+      officialHint: 'Official prices exclude this site\'s rates and are for comparison only; $ / 1M tokens',
+      noOfficial: 'No official reference price',
+      tier: 'Tier',
+      byGroup: 'Price by group',
+      byGroupHint: 'Prices include each group\'s rate; token prices in $ / 1M tokens. The highlighted row is the filtered group',
+      group: 'Group',
+      longContextOff: 'Tiers disabled'
+    },
+    example: {
+      title: 'Example request',
+      copy: 'Copy',
+      copied: 'Copied',
+      copySuccess: 'Example copied',
+      keyHint: 'Replace {key} with your API key; the key must be bound to one of the groups above'
     },
     detail: {
-      noModels: 'No models configured for this group',
-      noPricing: 'Pricing not configured',
       peakNote: 'Peak hours {window}: billing rate ×{multiplier}',
       longContextDisabledNote: 'Long-context tier pricing is disabled for this group: requests above the threshold are billed at the base tier; official tiers are for reference only'
     },
     table: {
+      otherTier: 'Other',
+      discount: 'Discount',
+      lowestGroup: 'Cheapest group',
       model: 'Model',
       input: 'Input',
       output: 'Output',
@@ -685,10 +746,7 @@ export default {
         '; prices in this row exclude the peak-hour rate — where this period overlaps the peak hours {window}, the overlapping portion is additionally multiplied by ×{multiplier}',
       timePricingWeekdays: 'Weekdays',
       timePricingRateHint: 'Effective rate {rate} × period multiplier {multiplier}',
-      paidPrice: 'Your Price (Discounted)',
-      officialPrice: 'Official Price',
       rate: 'Rate',
-      unitPerMillion: '$ / 1M tokens',
       perUnitRequest: '/ request',
       perUnitImage: '/ image',
       perRequest: 'Per request',

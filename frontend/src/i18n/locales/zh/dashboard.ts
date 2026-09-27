@@ -645,31 +645,92 @@ export default {
   // Model Plaza (public group/model pricing showcase)
   modelPlaza: {
     title: '模型广场',
-    description: '按分组浏览可用模型与价格',
+    searchPlaceholder: '搜索模型名称',
+    clearSearch: '清空搜索',
     loading: '加载中...',
-    empty: '暂无可展示的分组',
+    empty: '暂无可展示的模型',
     loadFailed: '加载模型广场失败',
     noSearchResult: '没有匹配的模型',
     anonymousHint: '登录后可查看你的专属分组与专属倍率',
     filters: {
-      platformLabel: '平台',
-      groupLabel: '分组',
-      rateLabel: '倍率',
-      modelLabel: '模型',
-      searchPlaceholder: '搜索模型名称',
-      all: '全部'
+      title: '筛选',
+      reset: '重置',
+      clearAll: '清空全部条件',
+      all: '全部',
+      platform: '平台',
+      group: '分组',
+      billing: '计费类型'
+    },
+    billing: {
+      token: 'Token',
+      per_request: '按次',
+      image: '图片',
+      video: '视频'
+    },
+    sort: {
+      label: '排序',
+      default: '默认排序',
+      name: '按名称',
+      priceAsc: '价格从低到高',
+      priceDesc: '价格从高到低'
+    },
+    view: {
+      label: '视图',
+      card: '卡片视图',
+      table: '表格视图'
+    },
+    toolbar: {
+      models: '个模型'
+    },
+    card: {
+      moreGroups: '+{count} 个分组',
+      groups: '{count} 个分组可用',
+      copyName: '复制模型名',
+      copied: '已复制模型名'
+    },
+    discount: {
+      off: '{zhe}折',
+      upTo: '低至'
+    },
+    price: {
+      original: '原价',
+      perMillion: '单位：美元 / 1M token'
     },
     badges: {
       exclusive: '专属分组',
-      subscription: '订阅'
+      subscription: '订阅',
+      tiered: '阶梯计价',
+      timePricing: '分时计价',
+      reasoning: '思考等级倍率'
+    },
+    drawer: {
+      lowestIn: '最低价来自「{group}」',
+      priceIn: '价格来自「{group}」',
+      lowestBadge: '最低',
+      official: '官方参考价',
+      officialHint: '官方价不含本站倍率，仅供对比，单位 $ / 1M token',
+      noOfficial: '暂无官方参考价',
+      tier: '档位',
+      byGroup: '按分组定价',
+      byGroupHint: '实付价已乘分组倍率，token 计费单位 $ / 1M token；高亮行为当前筛选的分组',
+      group: '分组',
+      longContextOff: '未启用阶梯'
+    },
+    example: {
+      title: '调用示例',
+      copy: '复制',
+      copied: '已复制',
+      copySuccess: '已复制调用示例',
+      keyHint: '把 {key} 换成你的 API 密钥，密钥需绑定到上面列出的任一分组'
     },
     detail: {
-      noModels: '该分组暂未配置模型',
-      noPricing: '未配置定价',
       peakNote: '高峰时段 {window} 计费倍率 ×{multiplier}',
       longContextDisabledNote: '该分组未启用长上下文阶梯计费，超阈值请求仍按基础档计费，官方阶梯仅供参考'
     },
     table: {
+      otherTier: '其他',
+      discount: '折扣',
+      lowestGroup: '最低价分组',
       model: '模型',
       input: '输入',
       output: '输出',
@@ -689,10 +750,7 @@ export default {
       timePricingRowHintPeak: '；本行价格未含高峰倍率，与高峰时段 {window} 重叠的部分实付再乘 ×{multiplier}',
       timePricingWeekdays: '工作日',
       timePricingRateHint: '生效倍率 {rate} × 时段倍率 {multiplier}',
-      paidPrice: '实付价格(折后)',
-      officialPrice: '官方价格',
       rate: '折扣倍率',
-      unitPerMillion: '$ / 1M token',
       perUnitRequest: '/ 次',
       perUnitImage: '/ 张',
       perRequest: '按次计费',
