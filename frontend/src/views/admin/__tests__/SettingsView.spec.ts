@@ -1129,6 +1129,57 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(payload).not.toHaveProperty("payment_visible_method_wxpay_enabled");
   });
 
+  it.each([
+    ["0", 0],
+    ["9000", 9000],
+    ["", 6000],
+    ["6000.6", 6001],
+  ])("submits the channel monitor slow-response threshold %j as %d", async (input, expected) => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      channel_monitor_enabled: true,
+      channel_monitor_mode: "v1",
+      channel_monitor_degraded_threshold_ms: 6000,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="channel-monitor-degraded-threshold"]').setValue(input);
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ channel_monitor_degraded_threshold_ms: expected }),
+    );
+    wrapper.unmount();
+  });
+
+  it("keeps a stored 0 slow-response threshold and hides the input in v2 mode", async () => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      channel_monitor_enabled: true,
+      channel_monitor_mode: "v1",
+      channel_monitor_degraded_threshold_ms: 0,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    const input = wrapper.get<HTMLInputElement>('[data-testid="channel-monitor-degraded-threshold"]');
+    expect(input.element.value).toBe("0");
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ channel_monitor_degraded_threshold_ms: 0 }),
+    );
+    wrapper.unmount();
+
+    getSettings.mockResolvedValueOnce({ ...baseSettingsResponse, channel_monitor_enabled: true, channel_monitor_mode: "v2" });
+    const v2 = mountView();
+    await flushPromises();
+    expect(v2.find('[data-testid="channel-monitor-degraded-threshold"]').exists()).toBe(false);
+    v2.unmount();
+  });
+
   it("submits the admin recharge affiliate rebate setting", async () => {
     getSettings.mockResolvedValueOnce({
       ...baseSettingsResponse,

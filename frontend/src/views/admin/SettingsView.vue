@@ -7292,6 +7292,25 @@
                 </p>
               </div>
 
+              <div v-if="form.channel_monitor_mode === 'v1'">
+                <label class="input-label" for="channel-monitor-degraded-threshold">
+                  {{ t('admin.settings.features.channelMonitor.degradedThreshold') }}
+                </label>
+                <input
+                  id="channel-monitor-degraded-threshold"
+                  v-model.number="form.channel_monitor_degraded_threshold_ms"
+                  type="number"
+                  min="0"
+                  max="45000"
+                  step="500"
+                  class="input"
+                  data-testid="channel-monitor-degraded-threshold"
+                />
+                <p class="mt-1 text-xs text-gray-400">
+                  {{ t('admin.settings.features.channelMonitor.degradedThresholdHint') }}
+                </p>
+              </div>
+
               <div v-if="form.channel_monitor_mode === 'v2'" class="space-y-4">
                 <div class="flex items-start justify-between gap-4">
                   <div class="min-w-0">
@@ -10051,6 +10070,7 @@ const form = reactive<SettingsForm>({
   channel_monitor_enabled: true,
   channel_monitor_mode: 'v1' as 'v1' | 'v2',
   channel_monitor_default_interval_seconds: 60,
+  channel_monitor_degraded_threshold_ms: 6000,
   channel_monitor_hide_throughput: false,
   channel_monitor_show_quota: false,
   channel_monitor_hide_user_ranking: false,
@@ -11760,6 +11780,12 @@ async function saveSettings() {
       channel_monitor_mode: form.channel_monitor_mode === 'v1' ? 'v1' : 'v2',
       channel_monitor_default_interval_seconds:
         Number(form.channel_monitor_default_interval_seconds) || 60,
+      // 0 是合法值（不因延迟标黄），不能用 || 兜底；清空输入框时 v-model.number 给的是 ""，回退默认值
+      channel_monitor_degraded_threshold_ms:
+        typeof form.channel_monitor_degraded_threshold_ms === "number" &&
+        Number.isFinite(form.channel_monitor_degraded_threshold_ms)
+          ? Math.round(form.channel_monitor_degraded_threshold_ms)
+          : 6000,
       channel_monitor_hide_throughput: Boolean(form.channel_monitor_hide_throughput),
       channel_monitor_show_quota: Boolean(form.channel_monitor_show_quota),
       channel_monitor_hide_user_ranking: Boolean(form.channel_monitor_hide_user_ranking),

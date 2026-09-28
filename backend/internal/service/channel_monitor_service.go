@@ -624,10 +624,10 @@ func (s *ChannelMonitorService) RunCheck(ctx context.Context, id int64) ([]*Chec
 	case MonitorCheckModeQuota:
 		results = s.runQuotaOnlyCheck(ctx, m)
 	case MonitorCheckModeQuotaProbe:
-		results = s.runChecksConcurrent(ctx, m)
+		results = s.runChecksConcurrent(ctx, m, rt)
 		attachQuotaSnapshot(results, s.fetchQuotaSnapshot(ctx, m))
 	default:
-		results = s.runChecksConcurrent(ctx, m)
+		results = s.runChecksConcurrent(ctx, m, rt)
 	}
 	s.persistCheckResults(ctx, m, results)
 	return results, nil
@@ -695,19 +695,20 @@ func (s *ChannelMonitorService) persistCheckResults(ctx context.Context, m *Chan
 
 // runChecksConcurrent 对 primary + extra 模型并发执行检测。
 // errgroup 仅用于等待，不传播错误（每个 model 失败都已打包进 CheckResult）。
-func (s *ChannelMonitorService) runChecksConcurrent(ctx context.Context, m *ChannelMonitor) []*CheckResult {
+func (s *ChannelMonitorService) runChecksConcurrent(ctx context.Context, m *ChannelMonitor, rt ChannelMonitorRuntime) []*CheckResult {
 	models := append([]string{m.PrimaryModel}, m.ExtraModels...)
 	results := make([]*CheckResult, len(models))
 
 	// ping 共享一次，所有模型记录同一个 ping 延迟。
 	pingMs := pingEndpointOrigin(ctx, m.Endpoint)
 
-	// 所有模型共用同一份 CheckOptions（来自监控的快照字段）。
+	// 所有模型共用同一份 CheckOptions（来自监控的快照字段 + 全局慢响应阈值）。
 	opts := &CheckOptions{
-		APIMode:          m.APIMode,
-		ExtraHeaders:     m.ExtraHeaders,
-		BodyOverrideMode: m.BodyOverrideMode,
-		BodyOverride:     m.BodyOverride,
+		APIMode:           m.APIMode,
+		ExtraHeaders:      m.ExtraHeaders,
+		BodyOverrideMode:  m.BodyOverrideMode,
+		BodyOverride:      m.BodyOverride,
+		DegradedThreshold: time.Duration(rt.DegradedThresholdMs) * time.Millisecond,
 	}
 
 	var eg errgroup.Group

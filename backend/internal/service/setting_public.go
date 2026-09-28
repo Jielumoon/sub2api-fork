@@ -387,6 +387,10 @@ const (
 	channelMonitorIntervalMax      = 3600
 	channelMonitorIntervalFallback = 60
 	defaultChannelMonitorMode      = ChannelMonitorModeV1
+
+	// channelMonitorDegradedThresholdMaxMs 对齐单次探测请求超时 monitorRequestTimeout（45s），更大没有意义。
+	channelMonitorDegradedThresholdMaxMs     = 45000
+	channelMonitorDegradedThresholdDefaultMs = 6000
 )
 
 // normalizeChannelMonitorMode accepts only v1/v2; empty/invalid → v1 (safe default).
@@ -425,12 +429,35 @@ func clampChannelMonitorInterval(v int) int {
 	return v
 }
 
+// parseChannelMonitorDegradedThresholdMs 解析慢响应阈值；空值 / 非法值按默认 6000ms。
+func parseChannelMonitorDegradedThresholdMs(raw string) int {
+	v, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return channelMonitorDegradedThresholdDefaultMs
+	}
+	return ClampChannelMonitorDegradedThresholdMs(v)
+}
+
+// ClampChannelMonitorDegradedThresholdMs 夹到 [0, 45000]；0 表示不因耗时降级。
+// handler 在合并请求时就调用它，保证落库值与审计比较的是同一个值。
+func ClampChannelMonitorDegradedThresholdMs(v int) int {
+	if v < 0 {
+		return 0
+	}
+	if v > channelMonitorDegradedThresholdMaxMs {
+		return channelMonitorDegradedThresholdMaxMs
+	}
+	return v
+}
+
 // ChannelMonitorRuntime is the lightweight view of the channel monitor feature
 // consumed by the runner, V2 aggregator, and user-facing handlers.
 type ChannelMonitorRuntime struct {
 	Enabled                bool
 	Mode                   string // ChannelMonitorModeV1 or ChannelMonitorModeV2
 	DefaultIntervalSeconds int
+	// DegradedThresholdMs V1 探测成功但耗时 ≥ 该值时判为 degraded；0 表示不因耗时降级。
+	DegradedThresholdMs int
 	// HideThroughput: when true, user-facing V2 APIs omit RPM/TPM scale signals.
 	HideThroughput bool
 	// ShowQuota: when true, user-facing monitor views keep the quota/balance
@@ -460,6 +487,7 @@ func (s *SettingService) GetChannelMonitorRuntime(ctx context.Context) ChannelMo
 			Enabled:                true,
 			Mode:                   defaultChannelMonitorMode,
 			DefaultIntervalSeconds: channelMonitorIntervalFallback,
+			DegradedThresholdMs:    channelMonitorDegradedThresholdDefaultMs,
 			HideThroughput:         true,
 		}
 	}
@@ -467,6 +495,7 @@ func (s *SettingService) GetChannelMonitorRuntime(ctx context.Context) ChannelMo
 		SettingKeyChannelMonitorEnabled,
 		SettingKeyChannelMonitorMode,
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
+		SettingKeyChannelMonitorDegradedThresholdMs,
 		SettingKeyChannelMonitorHideThroughput,
 		SettingKeyChannelMonitorShowQuota,
 		SettingKeyChannelMonitorHideUserRanking,
@@ -476,6 +505,7 @@ func (s *SettingService) GetChannelMonitorRuntime(ctx context.Context) ChannelMo
 			Enabled:                true,
 			Mode:                   defaultChannelMonitorMode,
 			DefaultIntervalSeconds: channelMonitorIntervalFallback,
+			DegradedThresholdMs:    channelMonitorDegradedThresholdDefaultMs,
 			HideThroughput:         true,
 		}
 	}
@@ -483,6 +513,7 @@ func (s *SettingService) GetChannelMonitorRuntime(ctx context.Context) ChannelMo
 		Enabled:                !isFalseSettingValue(vals[SettingKeyChannelMonitorEnabled]),
 		Mode:                   normalizeChannelMonitorMode(vals[SettingKeyChannelMonitorMode]),
 		DefaultIntervalSeconds: parseChannelMonitorInterval(vals[SettingKeyChannelMonitorDefaultIntervalSeconds]),
+		DegradedThresholdMs:    parseChannelMonitorDegradedThresholdMs(vals[SettingKeyChannelMonitorDegradedThresholdMs]),
 		HideThroughput:         !isFalseSettingValue(vals[SettingKeyChannelMonitorHideThroughput]),
 		ShowQuota:              vals[SettingKeyChannelMonitorShowQuota] == "true",
 		HideUserRanking:        isTrueSettingValue(vals[SettingKeyChannelMonitorHideUserRanking]),

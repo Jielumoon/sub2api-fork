@@ -39,7 +39,8 @@ func newSSRFSafeHTTPClient(timeout time.Duration) *http.Client {
 }
 
 // CheckOptions 承载一次检测的自定义入参。
-// 所有字段都是可选（零值即等价于"用默认行为"）。
+// 除 DegradedThreshold 外，字段都是可选（零值即等价于"用默认行为"）；
+// DegradedThreshold 的零值表示「不因耗时降级」而不是默认 6s，调用方必须显式传入运行时阈值。
 type CheckOptions struct {
 	// APIMode 仅对 OpenAI provider 生效；空串等同 chat_completions。
 	APIMode string
@@ -50,6 +51,9 @@ type CheckOptions struct {
 	// BodyOverride 在 merge 模式下做浅合并（key 命中黑名单时静默丢弃），
 	// 在 replace 模式下直接当作完整 body。
 	BodyOverride map[string]any
+	// DegradedThreshold 主请求成功但耗时 ≥ 该值时判为 degraded；0 表示不因耗时降级。
+	// 由系统设置 channel_monitor_degraded_threshold_ms 提供（默认 6s）。
+	DegradedThreshold time.Duration
 }
 
 // runCheckForModel 对单个 (provider, model) 做一次完整检测。
@@ -95,7 +99,7 @@ func runCheckForModel(ctx context.Context, provider, endpoint, apiKey, model str
 			res.Message = truncateMessage("replace-mode: upstream returned 2xx with empty text")
 			return res
 		}
-		return finalizeOperationalOrDegraded(res, latency, latencyMs)
+		return finalizeOperationalOrDegraded(res, latency, degradedThreshold(opts), latencyMs)
 	}
 
 	if !validateChallenge(respText, challenge.Expected) {
@@ -104,19 +108,27 @@ func runCheckForModel(ctx context.Context, provider, endpoint, apiKey, model str
 		return res
 	}
 
-	return finalizeOperationalOrDegraded(res, latency, latencyMs)
+	return finalizeOperationalOrDegraded(res, latency, degradedThreshold(opts), latencyMs)
 }
 
 // finalizeOperationalOrDegraded 负责走到最后一步的 operational/degraded 判定。
 // 拆出来是为了让 runCheckForModel 不超过 30 行。
-func finalizeOperationalOrDegraded(res *CheckResult, latency time.Duration, latencyMs int) *CheckResult {
-	if latency >= monitorDegradedThreshold {
+func finalizeOperationalOrDegraded(res *CheckResult, latency, threshold time.Duration, latencyMs int) *CheckResult {
+	if threshold > 0 && latency >= threshold {
 		res.Status = MonitorStatusDegraded
 		res.Message = truncateMessage(fmt.Sprintf("slow response: %dms", latencyMs))
 		return res
 	}
 	res.Status = MonitorStatusOperational
 	return res
+}
+
+// degradedThreshold 取 opts.DegradedThreshold，nil opts 视为 0（不因耗时降级）。
+func degradedThreshold(opts *CheckOptions) time.Duration {
+	if opts == nil {
+		return 0
+	}
+	return opts.DegradedThreshold
 }
 
 // bodyOverrideMode 归一取 opts.BodyOverrideMode，nil opts / 空串都视为 off。

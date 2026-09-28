@@ -28,6 +28,9 @@ export default {
           modeV1Hint: '默认模式：按配置的渠道监控项定时发起上游健康检查（产生探测流量）。',
           defaultInterval: '默认检测间隔（秒）',
           defaultIntervalHint: '仅 V1 模式使用：新建渠道监控时表单的默认值，可被单个渠道覆盖。范围 15 – 3600 秒。',
+          degradedThreshold: '慢响应阈值（毫秒）',
+          degradedThresholdHint:
+            '仅 V1 模式使用：检测成功但对话延迟达到该值时，渠道状态显示为黄色「降级」（仍计入可用率）。填 0 表示不因延迟标黄。默认 6000，范围 0 – 45000，保存后从下一次检测开始生效。',
           hideThroughput: '对用户隐藏吞吐速率（RPM / TPM）',
           hideThroughputHint:
             '开启后，用户端渠道监控页面与用户 API 不返回 RPM/TPM，避免用「速率 × 时间窗」反推集群规模。管理员仍可见完整指标；错误率、延迟、缓存率照常展示。',

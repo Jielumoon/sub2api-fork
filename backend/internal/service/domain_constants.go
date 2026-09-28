@@ -501,6 +501,10 @@ const (
 	// pre-filled when creating a new channel monitor from the admin UI. Range: [15, 3600].
 	SettingKeyChannelMonitorDefaultIntervalSeconds = "channel_monitor_default_interval_seconds"
 
+	// SettingKeyChannelMonitorDegradedThresholdMs V1 主动探测：主请求成功但耗时 ≥ 该值（毫秒）时判为 degraded。
+	// 0 表示不因耗时降级；范围 [0, 45000]，默认 6000。
+	SettingKeyChannelMonitorDegradedThresholdMs = "channel_monitor_degraded_threshold_ms"
+
 	// SettingKeyChannelMonitorHideThroughput hides RPM/TPM (and similar absolute
 	// throughput rates) from non-admin user-facing monitor APIs and UI, so users
 	// cannot reverse-estimate fleet volume from rates × window length.

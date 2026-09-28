@@ -28,6 +28,9 @@ export default {
           modeV1Hint: 'Default: runs scheduled upstream health checks for configured channel monitors (probe traffic).',
           defaultInterval: 'Default check interval (seconds)',
           defaultIntervalHint: 'V1 only: default interval for new monitors (overridable per monitor). Range 15 – 3600 seconds.',
+          degradedThreshold: 'Slow response threshold (ms)',
+          degradedThresholdHint:
+            'V1 only: a successful check whose dialog latency reaches this value is shown as yellow "Degraded" (still counted as available). Set 0 to never flag slowness. Default 6000, range 0 – 45000; applies from the next check after saving.',
           hideThroughput: 'Hide throughput rates from users (RPM / TPM)',
           hideThroughputHint:
             'When on, the user Channel Monitor page and user APIs omit RPM and TPM so fleet volume cannot be reverse-estimated from rates × window. Admins still see full metrics. Error rates, latency, and cache rates remain visible.',

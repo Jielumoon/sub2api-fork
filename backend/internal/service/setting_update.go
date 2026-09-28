@@ -416,6 +416,10 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	if v := clampChannelMonitorInterval(settings.ChannelMonitorDefaultIntervalSeconds); v > 0 {
 		updates[SettingKeyChannelMonitorDefaultIntervalSeconds] = strconv.Itoa(v)
 	}
+	// 0 是合法值（不因耗时降级），不能沿用上面 v > 0 的写法
+	updates[SettingKeyChannelMonitorDegradedThresholdMs] = strconv.Itoa(
+		ClampChannelMonitorDegradedThresholdMs(settings.ChannelMonitorDegradedThresholdMs),
+	)
 	updates[SettingKeyChannelMonitorHideThroughput] = strconv.FormatBool(settings.ChannelMonitorHideThroughput)
 	updates[SettingKeyChannelMonitorShowQuota] = strconv.FormatBool(settings.ChannelMonitorShowQuota)
 	updates[SettingKeyChannelMonitorHideUserRanking] = strconv.FormatBool(settings.ChannelMonitorHideUserRanking)

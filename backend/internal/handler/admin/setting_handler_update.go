@@ -334,6 +334,7 @@ type UpdateSettingsRequest struct {
 	ChannelMonitorEnabled                *bool   `json:"channel_monitor_enabled"`
 	ChannelMonitorMode                   *string `json:"channel_monitor_mode"`
 	ChannelMonitorDefaultIntervalSeconds *int    `json:"channel_monitor_default_interval_seconds"`
+	ChannelMonitorDegradedThresholdMs    *int    `json:"channel_monitor_degraded_threshold_ms"`
 	ChannelMonitorHideThroughput         *bool   `json:"channel_monitor_hide_throughput"`
 	ChannelMonitorShowQuota              *bool   `json:"channel_monitor_show_quota"`
 	ChannelMonitorHideUserRanking        *bool   `json:"channel_monitor_hide_user_ranking"`
@@ -1930,6 +1931,13 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.ChannelMonitorDefaultIntervalSeconds
 		}(),
+		ChannelMonitorDegradedThresholdMs: func() int {
+			if req.ChannelMonitorDegradedThresholdMs != nil {
+				// 在入口夹取：否则审计拿夹取前的值比较，0 → -5（落库仍为 0）会被误记为变更
+				return service.ClampChannelMonitorDegradedThresholdMs(*req.ChannelMonitorDegradedThresholdMs)
+			}
+			return previousSettings.ChannelMonitorDegradedThresholdMs
+		}(),
 		ChannelMonitorHideThroughput: func() bool {
 			if req.ChannelMonitorHideThroughput != nil {
 				return *req.ChannelMonitorHideThroughput
@@ -2415,6 +2423,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		ChannelMonitorEnabled:                updatedSettings.ChannelMonitorEnabled,
 		ChannelMonitorMode:                   updatedSettings.ChannelMonitorMode,
 		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
+		ChannelMonitorDegradedThresholdMs:    updatedSettings.ChannelMonitorDegradedThresholdMs,
 		ChannelMonitorHideThroughput:         updatedSettings.ChannelMonitorHideThroughput,
 		ChannelMonitorShowQuota:              updatedSettings.ChannelMonitorShowQuota,
 		ChannelMonitorHideUserRanking:        updatedSettings.ChannelMonitorHideUserRanking,

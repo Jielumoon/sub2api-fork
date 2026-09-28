@@ -377,6 +377,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
 		ChannelMonitorMode:                   settings.ChannelMonitorMode,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
+		ChannelMonitorDegradedThresholdMs:    settings.ChannelMonitorDegradedThresholdMs,
 		ChannelMonitorHideThroughput:         settings.ChannelMonitorHideThroughput,
 		ChannelMonitorShowQuota:              settings.ChannelMonitorShowQuota,
 		ChannelMonitorHideUserRanking:        settings.ChannelMonitorHideUserRanking,
