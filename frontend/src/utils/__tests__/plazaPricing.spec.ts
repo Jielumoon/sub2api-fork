@@ -35,6 +35,31 @@ describe('plazaPricing 倍率', () => {
     expect(offerRate(image, { ...group, image_rate_independent: false })).toBe(0.1)
   })
 
+  it.each([
+    { enabled: true, multiplier: 1, userRate: 0.05, expected: 1 },
+    { enabled: true, multiplier: 0.5, userRate: null, expected: 0.5 },
+    { enabled: true, multiplier: 0, userRate: 0.05, expected: 0 },
+    { enabled: true, multiplier: -1, userRate: null, expected: 0 },
+    { enabled: false, multiplier: 1, userRate: 0.05, expected: 0.05 },
+    { enabled: false, multiplier: 1, userRate: null, expected: 0.15 }
+  ])('视频独立倍率 independent=$enabled 时倍率为 $expected，不串用生图独立倍率', (tc) => {
+    const video = tokenModel({ pricing: requestPricing({ billing_mode: 'video', per_request_price: 2 }) })
+    const group = plazaGroup({
+      rate_multiplier: 0.15,
+      user_rate_multiplier: tc.userRate,
+      image_rate_independent: true,
+      image_rate_multiplier: 9,
+      video_rate_independent: tc.enabled,
+      video_rate_multiplier: tc.multiplier
+    })
+    expect(offerRate(video, group)).toBe(tc.expected)
+  })
+
+  it('独立倍率为负数时按 0 计，与后端一致', () => {
+    const image = tokenModel({ pricing: requestPricing({ billing_mode: 'image', per_request_price: 0.2 }) })
+    expect(offerRate(image, plazaGroup({ image_rate_independent: true, image_rate_multiplier: -1 }))).toBe(0)
+  })
+
   it('时段倍率 = 生效倍率 × 时段倍率，去掉浮点噪声', () => {
     expect(periodRate(0.8, { start_time: '00:30', end_time: '08:30', multiplier: 0.5 })).toBe(0.4)
     expect(periodRate(0.8, { start_time: '18:00', end_time: '22:00', multiplier: 1.2 })).toBe(0.96)

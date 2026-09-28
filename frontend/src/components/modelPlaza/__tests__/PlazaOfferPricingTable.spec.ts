@@ -162,6 +162,19 @@ describe('PlazaOfferPricingTable 按次 / 按图计费', () => {
     expect(off[1].text()).toBe('0.1x')
     expect(off[2].text()).toContain('$0.02')
   })
+
+  it('视频独立倍率作用于分辨率档位，倍率列展示独立倍率', () => {
+    const model = tokenModel({
+      pricing: requestPricing({ billing_mode: 'video', intervals: [requestTier('720p', 2)] }),
+      official_pricing: null
+    })
+    const c = cells(
+      mountOffer(model, { rate_multiplier: 0.15, user_rate_multiplier: 0.05, video_rate_independent: true, video_rate_multiplier: 0.5 })
+    )
+    expect(c[1].text()).toBe('0.5x')
+    expect(c[2].text()).toContain('720p')
+    expect(c[2].text()).toContain('$1.00')
+  })
 })
 
 describe('PlazaOfferPricingTable 分时计价', () => {

@@ -6,6 +6,7 @@ import { formatScaled, resolveIntervalPrices } from '@/utils/pricing'
 import {
   BILLING_MODE_IMAGE,
   BILLING_MODE_TOKEN,
+  BILLING_MODE_VIDEO,
   REASONING_EFFORT_LEVELS,
   type BillingMode
 } from '@/constants/channel'
@@ -18,7 +19,11 @@ export const PER_MILLION = 1_000_000
 const MIN_DECIMALS = 2
 
 type RateFields = Pick<ModelPlazaGroup, 'rate_multiplier' | 'user_rate_multiplier'>
-type ImageRateFields = RateFields & Pick<ModelPlazaGroup, 'image_rate_independent' | 'image_rate_multiplier'>
+type MediaRateFields = RateFields &
+  Pick<
+    ModelPlazaGroup,
+    'image_rate_independent' | 'image_rate_multiplier' | 'video_rate_independent' | 'video_rate_multiplier'
+  >
 
 export function billingMode(m: PlazaModel): BillingMode {
   return (m.pricing?.billing_mode || BILLING_MODE_TOKEN) as BillingMode
@@ -38,14 +43,25 @@ export function hasCustomRate(g: RateFields): boolean {
   return g.user_rate_multiplier != null && g.user_rate_multiplier !== g.rate_multiplier
 }
 
-/** 图片计费模型且分组开启生图独立倍率：实付倍率取独立倍率，与计费口径一致。 */
-export function usesIndependentImageRate(m: PlazaModel, g: ImageRateFields): boolean {
-  return billingMode(m) === BILLING_MODE_IMAGE && g.image_rate_independent === true
+/**
+ * 图片 / 视频计费模型在分组开启对应独立倍率时的倍率，未开启为 null。
+ * 负数按 0，与后端 resolveImageRateMultiplier / resolveVideoRateMultiplier 一致。
+ */
+function independentMediaRate(m: PlazaModel, g: MediaRateFields): number | null {
+  const mode = billingMode(m)
+  if (mode === BILLING_MODE_IMAGE && g.image_rate_independent === true) return Math.max(0, g.image_rate_multiplier ?? 1)
+  if (mode === BILLING_MODE_VIDEO && g.video_rate_independent === true) return Math.max(0, g.video_rate_multiplier ?? 1)
+  return null
+}
+
+/** 实付倍率取图片 / 视频独立倍率，不取分组/专属倍率。 */
+export function usesIndependentMediaRate(m: PlazaModel, g: MediaRateFields): boolean {
+  return independentMediaRate(m, g) != null
 }
 
 /** 该模型在该分组的实付倍率（token 与按次都用它乘单价）。 */
-export function offerRate(m: PlazaModel, g: ImageRateFields): number {
-  return usesIndependentImageRate(m, g) ? (g.image_rate_multiplier ?? 1) : groupRate(g)
+export function offerRate(m: PlazaModel, g: MediaRateFields): number {
+  return independentMediaRate(m, g) ?? groupRate(g)
 }
 
 /** 分时时段的生效倍率 = 生效倍率 × 时段倍率（去掉浮点噪声）。 */

@@ -121,7 +121,7 @@
             </template>
           </td>
 
-          <!-- 倍率：时段行 = 生效倍率 × 时段倍率；生图独立倍率行 = 独立倍率；专属倍率划线原倍率 -->
+          <!-- 倍率：时段行 = 生效倍率 × 时段倍率；图片 / 视频独立倍率行 = 独立倍率；专属倍率划线原倍率 -->
           <td class="whitespace-nowrap px-3 py-2.5 text-right font-display text-xs" data-rate>
             <span
               v-if="period"
@@ -129,7 +129,7 @@
               :title="t('modelPlaza.table.timePricingRateHint', { rate: groupRate(offer.group), multiplier: period.multiplier })"
               >{{ formatRate(rowRate(offer, period)) }}x</span
             >
-            <span v-else-if="usesIndependentImageRate(offer.model, offer.group)" class="font-bold text-gray-700 dark:text-gray-300"
+            <span v-else-if="usesIndependentMediaRate(offer.model, offer.group)" class="font-bold text-gray-700 dark:text-gray-300"
               >{{ formatRate(rowRate(offer, null)) }}x</span
             >
             <template v-else-if="hasCustomRate(offer.group)">
@@ -259,7 +259,7 @@ import {
   timePeriods,
   tokenIntervals,
   unitPriceTiers,
-  usesIndependentImageRate
+  usesIndependentMediaRate
 } from '@/utils/plazaPricing'
 import { platformBadgeLightClass, platformLabel } from '@/utils/platformColors'
 import { hasPeakRate, serverTimezoneLabel } from '@/utils/peak-rate'
