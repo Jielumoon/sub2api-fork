@@ -81,6 +81,8 @@ export default {
     notFoundDesc: 'This custom page does not exist or has been removed.',
     notConfiguredTitle: 'Page URL not configured',
     notConfiguredDesc: 'The URL for this custom page has not been properly configured.',
+    newTabTitle: 'This page opens in a new tab',
+    newTabDesc: 'The administrator set this page to open in a new tab. Use the button below to continue.',
     tableOfContents: 'Contents',
     copyCode: 'Copy',
     copiedCode: 'Copied',

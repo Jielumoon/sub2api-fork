@@ -185,6 +185,8 @@ export interface SendVerifyCodeResponse {
   countdown: number
 }
 
+export type CustomMenuOpenMode = 'embed' | 'embed_clean' | 'new_tab'
+
 export interface CustomMenuItem {
   id: string
   label: string
@@ -192,6 +194,8 @@ export interface CustomMenuItem {
   url: string
   page_slug?: string
   hide_open_button?: boolean
+  /** 缺省按 embed（站内打开，带用户参数）处理。 */
+  open_mode?: CustomMenuOpenMode
   visibility: 'user' | 'admin'
   sort_order: number
 }

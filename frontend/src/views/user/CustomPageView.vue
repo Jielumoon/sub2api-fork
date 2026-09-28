@@ -76,6 +76,32 @@
           ></div>
         </div>
 
+        <!-- New tab mode: never embed, only offer a link to the raw URL -->
+        <div v-else-if="openMode === 'new_tab' && newTabUrl" class="flex h-full items-center justify-center p-10 text-center">
+          <div class="max-w-md">
+            <div
+              class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-dark-700"
+            >
+              <Icon name="externalLink" size="lg" class="text-gray-400" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ t('customPage.newTabTitle') }}
+            </h3>
+            <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
+              {{ t('customPage.newTabDesc') }}
+            </p>
+            <a
+              :href="newTabUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary btn-sm mt-4 custom-new-tab-link"
+            >
+              <Icon name="externalLink" size="sm" class="mr-1.5" :stroke-width="2" />
+              {{ t('customPage.openInNewTab') }}
+            </a>
+          </div>
+        </div>
+
         <!-- URL not configured -->
         <div v-else-if="!isValidUrl" class="flex h-full items-center justify-center p-10 text-center">
           <div class="max-w-md">
@@ -137,6 +163,8 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { buildApiUrl } from '@/api/client'
 import { buildEmbeddedUrl, detectTheme } from '@/utils/embedded-url'
+import { customMenuExternalUrl, customMenuMarkdownSlug, customMenuOpenMode } from '@/utils/customMenu'
+import { sanitizeUrl } from '@/utils/url'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -231,18 +259,18 @@ const menuItem = computed(() => {
   return null
 })
 
-const markdownSlug = computed(() => {
-  const item = menuItem.value
-  if (!item) return ''
-  if (item.page_slug) return item.page_slug
-  if (item.url?.startsWith('md:')) return item.url.slice(3)
-  return ''
-})
+const markdownSlug = computed(() => (menuItem.value ? customMenuMarkdownSlug(menuItem.value) : ''))
 
 const isMarkdownMode = computed(() => !!markdownSlug.value)
 
+const openMode = computed(() => (menuItem.value ? customMenuOpenMode(menuItem.value) : null))
+
+const newTabUrl = computed(() => (menuItem.value ? customMenuExternalUrl(menuItem.value) : null))
+
 const embeddedUrl = computed(() => {
-  if (!menuItem.value || isMarkdownMode.value) return ''
+  if (!menuItem.value || isMarkdownMode.value || openMode.value === 'new_tab') return ''
+  // 第三方页面（如发卡店铺）不附带任何用户参数，避免把登录 token 交给第三方
+  if (openMode.value === 'embed_clean') return sanitizeUrl(menuItem.value.url)
   return buildEmbeddedUrl(
     menuItem.value.url,
     authStore.user?.id,

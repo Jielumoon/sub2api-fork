@@ -17,6 +17,8 @@ type CustomMenuItem struct {
 	Visibility     string `json:"visibility"` // "user" or "admin"
 	SortOrder      int    `json:"sort_order"`
 	HideOpenButton bool   `json:"hide_open_button,omitempty"`
+	// OpenMode: "" / "embed"（站内打开，带用户参数）、"embed_clean"（站内打开，不带参数）、"new_tab"（新标签页）
+	OpenMode string `json:"open_mode,omitempty"`
 }
 
 // CustomEndpoint represents an admin-configured API endpoint for quick copy.

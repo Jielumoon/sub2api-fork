@@ -156,6 +156,50 @@ describe('custom page open button', () => {
     expect(button.style.left).toBe('')
   })
 
+  it('embeds third-party pages without any user parameters in embed_clean mode', () => {
+    const shopUrl = 'https://shop.example.com/s/abc'
+    appStore.cachedPublicSettings.custom_menu_items = [{ id: 'docs', url: shopUrl, open_mode: 'embed_clean' }] as never
+    const wrapper = mountPage()
+    expect(wrapper.get('iframe').attributes('src')).toBe(shopUrl)
+    expect(wrapper.get<HTMLAnchorElement>('.custom-open-fab').element.href).toBe(shopUrl)
+  })
+
+  it('treats an unknown open_mode as embed_clean instead of leaking the token', () => {
+    const shopUrl = 'https://shop.example.com/s/abc'
+    appStore.cachedPublicSettings.custom_menu_items = [{ id: 'docs', url: shopUrl, open_mode: 'popup' }] as never
+    const wrapper = mountPage()
+    expect(wrapper.get('iframe').attributes('src')).toBe(shopUrl)
+  })
+
+  it('never embeds new_tab pages and only links to the raw URL', () => {
+    const shopUrl = 'https://shop.example.com/s/abc'
+    appStore.cachedPublicSettings.custom_menu_items = [{ id: 'docs', url: shopUrl, open_mode: 'new_tab' }] as never
+    const wrapper = mountPage()
+    expect(wrapper.find('iframe').exists()).toBe(false)
+    expect(wrapper.find('.custom-open-fab').exists()).toBe(false)
+    const link = wrapper.get<HTMLAnchorElement>('.custom-new-tab-link').element
+    expect(link.href).toBe(shopUrl)
+    expect(link.target).toBe('_blank')
+    expect(link.rel).toBe('noopener noreferrer')
+  })
+
+  it('shows the not-configured state instead of an embed for new_tab items with an unusable URL', () => {
+    appStore.cachedPublicSettings.custom_menu_items = [{ id: 'docs', url: 'https:x.com', open_mode: 'new_tab' }] as never
+    const wrapper = mountPage()
+    expect(wrapper.find('iframe').exists()).toBe(false)
+    expect(wrapper.find('.custom-new-tab-link').exists()).toBe(false)
+    expect(wrapper.text()).toContain('customPage.notConfiguredTitle')
+  })
+
+  it('renders Markdown even when a markdown item carries open_mode new_tab', async () => {
+    appStore.cachedPublicSettings.custom_menu_items = [{ id: 'docs', url: 'md:guide', open_mode: 'new_tab' }] as never
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => '# Guide' }))
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.find('.custom-new-tab-link').exists()).toBe(false)
+    expect(wrapper.get('.markdown-page-content h1').text()).toBe('Guide')
+  })
+
   it('keeps Markdown pages separate from the embedded-page controls', async () => {
     appStore.cachedPublicSettings.custom_menu_items = [{ id: 'docs', url: 'md:guide' }]
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => '# Guide' }))

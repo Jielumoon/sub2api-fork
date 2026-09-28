@@ -705,6 +705,12 @@ export default {
         url: '页面 URL',
         urlPlaceholder: 'https://example.com/page',
         hideOpenButton: '隐藏“新窗口打开”按钮',
+        openMode: '打开方式',
+        openModeEmbed: '站内打开（附带用户参数）',
+        openModeEmbedClean: '站内打开（不附带任何参数）',
+        openModeNewTab: '新标签页打开',
+        openModeHint:
+          '「附带用户参数」会在 URL 后拼接 user_id、登录 token 等，只用于自己信任的站点；第三方页面（如发卡店铺）请选「不附带任何参数」或「新标签页打开」。',
         iconSvg: 'SVG 图标',
         iconSvgPlaceholder: '<svg>...</svg>',
         iconPreview: '图标预览',

@@ -79,6 +79,8 @@ export default {
     notFoundDesc: '该自定义页面不存在或已被删除。',
     notConfiguredTitle: '页面链接未配置',
     notConfiguredDesc: '该自定义页面的 URL 未正确配置。',
+    newTabTitle: '该页面需在新标签页打开',
+    newTabDesc: '管理员将此页面设置为在新标签页打开，点击下方按钮前往。',
     tableOfContents: '目录',
     copyCode: '复制',
     copiedCode: '已复制',

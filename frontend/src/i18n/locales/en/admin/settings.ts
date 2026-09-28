@@ -710,6 +710,12 @@ export default {
         url: 'Page URL',
         urlPlaceholder: 'https://example.com/page',
         hideOpenButton: 'Hide the “Open in new tab” button',
+        openMode: 'Open mode',
+        openModeEmbed: 'Embed (with user parameters)',
+        openModeEmbedClean: 'Embed (no parameters)',
+        openModeNewTab: 'Open in new tab',
+        openModeHint:
+          '"With user parameters" appends user_id, the login token and more to the URL; use it only for sites you trust. For third-party pages (such as a card shop), choose "no parameters" or "new tab".',
         iconSvg: 'SVG Icon',
         iconSvgPlaceholder: '<svg>...</svg>',
         iconPreview: 'Icon Preview',

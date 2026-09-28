@@ -6901,7 +6901,46 @@
                     />
                   </div>
 
-                  <label class="flex items-center gap-2 sm:col-span-2">
+                  <!-- Open mode (URL items only; markdown pages ignore it) -->
+                  <div
+                    v-if="!customMenuMarkdownSlug(item)"
+                    class="sm:col-span-2"
+                  >
+                    <label
+                      :for="`custom-menu-open-mode-${index}`"
+                      class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      {{ t("admin.settings.customMenu.openMode") }}
+                    </label>
+                    <select
+                      :id="`custom-menu-open-mode-${index}`"
+                      :value="item.open_mode || 'embed'"
+                      class="input text-sm"
+                      data-testid="custom-menu-open-mode"
+                      @change="
+                        item.open_mode = ($event.target as HTMLSelectElement)
+                          .value as CustomMenuOpenMode
+                      "
+                    >
+                      <option value="embed">
+                        {{ t("admin.settings.customMenu.openModeEmbed") }}
+                      </option>
+                      <option value="embed_clean">
+                        {{ t("admin.settings.customMenu.openModeEmbedClean") }}
+                      </option>
+                      <option value="new_tab">
+                        {{ t("admin.settings.customMenu.openModeNewTab") }}
+                      </option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-400">
+                      {{ t("admin.settings.customMenu.openModeHint") }}
+                    </p>
+                  </div>
+
+                  <label
+                    v-if="item.open_mode !== 'new_tab'"
+                    class="flex items-center gap-2 sm:col-span-2"
+                  >
                     <input
                       v-model="item.hide_open_button"
                       type="checkbox"
@@ -8986,6 +9025,7 @@ import type {
 } from "@/api/admin/settings";
 import type {
   AdminGroup,
+  CustomMenuOpenMode,
   LoginAgreementDocument,
   NotifyEmailEntry,
   Proxy,
@@ -9022,6 +9062,7 @@ import {
 import TotpStepUpDialog from "@/components/auth/TotpStepUpDialog.vue";
 import { affiliatesAPI, type AffiliateAdminEntry, type SimpleUser as AffiliateSimpleUser } from "@/api/admin/affiliates";
 import { extractApiErrorMessage, extractI18nErrorMessage } from "@/utils/apiError";
+import { customMenuMarkdownSlug } from "@/utils/customMenu";
 import { useAppStore } from "@/stores";
 import { useAdminSettingsStore } from "@/stores/adminSettings";
 import { normalizeVisibleMethod } from "@/components/payment/paymentFlow";
@@ -9813,6 +9854,7 @@ const form = reactive<SettingsForm>({
     visibility: "user" | "admin";
     sort_order: number;
     hide_open_button?: boolean;
+    open_mode?: CustomMenuOpenMode;
   }>,
   custom_endpoints: [] as Array<{
     name: string;

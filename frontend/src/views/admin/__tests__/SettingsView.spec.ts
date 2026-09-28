@@ -746,6 +746,34 @@ describe("admin SettingsView payment visible method controls", () => {
     wrapper.unmount();
   });
 
+  it("loads and saves the open mode for each custom menu", async () => {
+    const menuItems = [
+      { id: "docs", label: "Docs", url: "https://example.com/docs", icon_svg: "", visibility: "user", sort_order: 0 },
+      { id: "shop", label: "Shop", url: "https://shop.example.com/s/abc", icon_svg: "", visibility: "user", sort_order: 1, open_mode: "new_tab" },
+      { id: "guide", label: "Guide", url: "md:guide", icon_svg: "", visibility: "user", sort_order: 2 },
+    ];
+    getSettings.mockResolvedValue({ ...baseSettingsResponse, custom_menu_items: menuItems });
+    const wrapper = mountView();
+    await flushPromises();
+
+    const selects = wrapper.findAll<HTMLSelectElement>('[data-testid="custom-menu-open-mode"]');
+    expect(selects.map(select => select.element.value)).toEqual(["embed", "new_tab"]);
+    // new_tab 菜单项不显示「隐藏新窗口打开按钮」
+    expect(wrapper.findAll('[data-testid="custom-menu-hide-open-button"]')).toHaveLength(2);
+    await selects[0].setValue("embed_clean");
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      custom_menu_items: [
+        { ...menuItems[0], open_mode: "embed_clean" },
+        menuItems[1],
+        menuItems[2],
+      ],
+    }));
+    wrapper.unmount();
+  });
+
   it("submits the compact home page toggle", async () => {
     const wrapper = mountView();
     await flushPromises();
