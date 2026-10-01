@@ -15,6 +15,13 @@ type resetAccountStub struct{ account *Account }
 
 func (s resetAccountStub) GetByID(context.Context, int64) (*Account, error) { return s.account, nil }
 
+type resetProxyStub struct {
+	ProxyRepository
+	proxy *Proxy
+}
+
+func (s resetProxyStub) GetByID(context.Context, int64) (*Proxy, error) { return s.proxy, nil }
+
 type resetTokenStub struct{}
 
 func (resetTokenStub) GetAccessToken(context.Context, *Account) (string, error) {
@@ -24,7 +31,7 @@ func TestClaudeResetStatusNativeContract(t *testing.T) {
 	now := time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)
 	proxyID := int64(9)
 	proxy := &Proxy{ID: proxyID, Protocol: "http", Host: "proxy.test", Port: 8080, Username: "Default.{account_id}", Password: "synthetic-password"}
-	s := &ClaudeResetCreditService{accounts: resetAccountStub{&Account{ID: 1, Platform: PlatformAnthropic, Type: AccountTypeOAuth, ProxyID: &proxyID, Credentials: map[string]any{"scope": "user:profile user:inference"}}}, tokens: resetTokenStub{}, proxies: &updatingProxyRepoStub{proxy: proxy}, now: func() time.Time { return now }}
+	s := &ClaudeResetCreditService{accounts: resetAccountStub{&Account{ID: 1, Platform: PlatformAnthropic, Type: AccountTypeOAuth, ProxyID: &proxyID, Credentials: map[string]any{"scope": "user:profile user:inference"}}}, tokens: resetTokenStub{}, proxies: resetProxyStub{proxy: proxy}, now: func() time.Time { return now }}
 	s.do = func(r *http.Request, p string) (*http.Response, error) {
 		require.Equal(t, "http://Default.1:synthetic-password@proxy.test:8080", p)
 		require.Equal(t, claudeResetUsageURL, r.URL.String())
