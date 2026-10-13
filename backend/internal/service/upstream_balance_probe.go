@@ -271,7 +271,11 @@ func (s *UpstreamBillingProbeService) probeBalanceAccount(ctx context.Context, a
 	if err != nil || value == nil {
 		return nil, err
 	}
-	return value.(*UpstreamBalanceProbeSnapshot), nil
+	snapshot, ok := value.(*UpstreamBalanceProbeSnapshot)
+	if !ok {
+		return nil, fmt.Errorf("invalid upstream balance probe result")
+	}
+	return snapshot, nil
 }
 
 func (s *UpstreamBillingProbeService) probeLoadedBalance(ctx context.Context, account *Account, interval int) (*UpstreamBalanceProbeSnapshot, error) {
@@ -379,7 +383,7 @@ func (s *UpstreamBillingProbeService) requestUpstreamProbe(ctx context.Context, 
 	if resp == nil || resp.Body == nil {
 		return nil, 0, 0, "empty_response", nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	retry := retryAfter(resp.Header, now)
 	body, err := io.ReadAll(io.LimitReader(resp.Body, upstreamBillingProbeMaxBodyBytes+1))
 	if err != nil {
