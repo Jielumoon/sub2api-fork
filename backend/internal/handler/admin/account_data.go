@@ -199,13 +199,19 @@ func (h *AccountHandler) ExportData(c *gin.Context) {
 			v := acc.ExpiresAt.Unix()
 			expiresAt = &v
 		}
+		extra := make(map[string]any, len(acc.Extra))
+		for key, value := range acc.Extra {
+			if key != service.UpstreamBalanceProbeExtraKey && key != service.UpstreamBalanceProbeRevisionExtraKey {
+				extra[key] = value
+			}
+		}
 		dataAccounts = append(dataAccounts, DataAccount{
 			Name:               acc.Name,
 			Notes:              acc.Notes,
 			Platform:           acc.Platform,
 			Type:               acc.Type,
 			Credentials:        acc.Credentials,
-			Extra:              acc.Extra,
+			Extra:              extra,
 			ProxyKey:           proxyKey,
 			Concurrency:        acc.Concurrency,
 			Priority:           acc.Priority,

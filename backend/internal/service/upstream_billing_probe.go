@@ -1,13 +1,11 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"math"
 	"math/rand/v2"
@@ -22,7 +20,6 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
@@ -133,8 +130,9 @@ type UpstreamBillingProbeResult struct {
 // account table's background refresh. It intentionally excludes credentials,
 // runtime counters, and usage data from the response.
 type UpstreamBillingRateSnapshotItem struct {
-	AccountID int64                         `json:"account_id"`
-	Snapshot  *UpstreamBillingProbeSnapshot `json:"snapshot"`
+	AccountID       int64                         `json:"account_id"`
+	Snapshot        *UpstreamBillingProbeSnapshot `json:"snapshot"`
+	BalanceSnapshot *UpstreamBalanceProbeSnapshot `json:"balance_snapshot"`
 }
 
 // BuildUpstreamBillingRateSnapshotItems projects account rows into the
@@ -151,8 +149,9 @@ func BuildUpstreamBillingRateSnapshotItems(accounts []Account) []UpstreamBilling
 			snapshot = decodeUpstreamBillingProbeSnapshot(account.Extra)
 		}
 		items = append(items, UpstreamBillingRateSnapshotItem{
-			AccountID: account.ID,
-			Snapshot:  snapshot,
+			AccountID:       account.ID,
+			Snapshot:        snapshot,
+			BalanceSnapshot: DecodeUpstreamBalanceProbeSnapshot(&account),
 		})
 	}
 	return items
@@ -395,30 +394,22 @@ func (s *UpstreamBillingProbeService) RunDue(ctx context.Context) error {
 	due := make([]Account, 0, len(accounts))
 	for i := range accounts {
 		account := accounts[i]
-		if !isUpstreamBillingProbeAccount(&account) || !account.IsActive() || !upstreamBillingProbeEnabled(&account) {
+		if !isUpstreamBillingProbeAccount(&account) || !account.IsActive() {
 			continue
 		}
-		snapshot := decodeUpstreamBillingProbeSnapshot(account.Extra)
-		if snapshot != nil && !snapshot.NextProbeAt.IsZero() && now.Before(snapshot.NextProbeAt) {
+		next, enabled := nextUpstreamAccountProbe(&account)
+		if !enabled || now.Before(next) {
 			continue
 		}
 		due = append(due, account)
 	}
 	sort.SliceStable(due, func(i, j int) bool {
-		left := decodeUpstreamBillingProbeSnapshot(due[i].Extra)
-		right := decodeUpstreamBillingProbeSnapshot(due[j].Extra)
-		leftUnset := left == nil || left.NextProbeAt.IsZero()
-		rightUnset := right == nil || right.NextProbeAt.IsZero()
-		if leftUnset && rightUnset {
+		left, _ := nextUpstreamAccountProbe(&due[i])
+		right, _ := nextUpstreamAccountProbe(&due[j])
+		if left.Equal(right) {
 			return due[i].ID < due[j].ID
 		}
-		if leftUnset {
-			return true
-		}
-		if rightUnset {
-			return false
-		}
-		return left.NextProbeAt.Before(right.NextProbeAt)
+		return left.Before(right)
 	})
 	if len(due) > upstreamBillingProbeMaxPerCycle {
 		due = due[:upstreamBillingProbeMaxPerCycle]
@@ -430,6 +421,9 @@ func (s *UpstreamBillingProbeService) RunDue(ctx context.Context) error {
 		group.Go(func() error {
 			if _, probeErr := s.probeScheduledAccount(ctx, accountID, settings.IntervalMinutes); probeErr != nil {
 				logger.LegacyPrintf("service.upstream_billing_probe", "probe_due_failed: account_id=%d err=%v", accountID, probeErr)
+			}
+			if _, probeErr := s.probeBalanceAccount(ctx, accountID, settings.IntervalMinutes, true); probeErr != nil {
+				logger.LegacyPrintf("service.upstream_billing_probe", "balance_probe_due_failed: account_id=%d err=%v", accountID, probeErr)
 			}
 			return nil
 		})
@@ -493,6 +487,14 @@ func (s *UpstreamBillingProbeService) probeAccountWithMode(ctx context.Context, 
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
+		release, acquired, lockErr := s.tryAcquireLeaderLock(ctx, fmt.Sprintf("upstream:probe:account:%d", accountID))
+		if lockErr != nil {
+			return nil, lockErr
+		}
+		if !acquired {
+			return nil, infraerrors.Conflict("UPSTREAM_PROBE_BUSY", "账号正在探测，请稍后刷新")
+		}
+		defer release()
 		account, loadErr := s.accountRepo.GetByID(ctx, accountID)
 		if loadErr != nil {
 			return nil, loadErr
@@ -617,90 +619,16 @@ func (s *UpstreamBillingProbeService) SetAccountEnabled(ctx context.Context, acc
 
 func (s *UpstreamBillingProbeService) probeLoadedAccount(ctx context.Context, account *Account, intervalMinutes int) (*UpstreamBillingProbeSnapshot, error) {
 	now := s.currentTime().UTC()
-	if s.accountTestService == nil || s.accountTestService.httpUpstream == nil {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "transport_unavailable", 0)
-	}
-	// 平台放宽后取数直读 credentials：所有 API-key 平台的密钥与自定义上游
-	// 统一存放在 credentials.api_key / credentials.base_url。
-	apiKey := account.GetCredential("api_key")
-	if apiKey == "" {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "missing_api_key", 0)
-	}
-	baseURL := account.GetCredential("base_url")
-	if account.RoutesProtocolByInbound() && account.IsAdaptiveAPIProtocol() {
-		baseURL = account.GetCNProtocolBaseURL(APIProtocolChatCompletions)
-	}
-	if account.Platform == PlatformOpenAI {
-		if baseURL == "" {
-			// 保持官方语义：OpenAI 账号无自定义 base 时探官方域（404 → unsupported）。
-			baseURL = "https://api.openai.com"
-		}
-	} else if upstreamBillingProbeTargetIsOfficialAPI(baseURL) {
-		// 其他平台 base_url 为空或指向官方 API 根域（前端创建时会把空值
-		// 填成官方默认域，且提供 us-east-1.api.x.ai 等官方区域预设）⇒
-		// 必无 /v1/sub2api/billing；不发请求，直接记 unsupported，避免
-		// 拿账号 Key 周期性请求官方域的不存在路径。
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "unsupported", 0)
-	}
-	normalizedBaseURL, err := s.accountTestService.validateUpstreamBaseURL(baseURL)
+	body, status, retry, reason, err := s.requestUpstreamProbe(ctx, account, "/v1/sub2api/billing", now)
 	if err != nil {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "invalid_base_url", 0)
+		return nil, err
 	}
-	proxyURL := ""
-	if account.ProxyID != nil {
-		if account.Proxy == nil {
-			return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "proxy_unavailable", 0)
-		}
-		if account.Proxy.ID != *account.ProxyID {
-			return nil, ErrUpstreamBillingProbeIdentityChanged
-		}
-		proxyURL = account.Proxy.URL()
-	}
-	probeURL := buildOpenAIEndpointURL(normalizedBaseURL, "/v1/sub2api/billing")
-	probeCtx, cancel := context.WithTimeout(ctx, upstreamBillingProbeRequestTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(probeCtx, http.MethodGet, probeURL, bytes.NewReader(nil))
-	if err != nil {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "request_build_failed", 0)
-	}
-	// OpenAI 账号保持官方 openai 传输画像；其他平台探测走默认画像。
-	profile := HTTPUpstreamProfileDefault
-	if account.Platform == PlatformOpenAI {
-		profile = HTTPUpstreamProfileOpenAI
-	}
-	reqCtx := WithHTTPUpstreamProfile(req.Context(), profile)
-	req = req.WithContext(WithHTTPUpstreamRedirectsDisabled(reqCtx))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	account.ApplyHeaderOverrides(req.Header)
-	var tlsProfile *tlsfingerprint.Profile
-	if s.accountTestService.tlsFPProfileService != nil {
-		tlsProfile = s.accountTestService.tlsFPProfileService.ResolveTLSProfile(account)
-	}
-	resp, err := s.accountTestService.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, tlsProfile)
-	if err != nil {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "request_failed", 0)
-	}
-	if resp == nil || resp.Body == nil {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "empty_response", 0)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	body, readErr := io.ReadAll(io.LimitReader(resp.Body, upstreamBillingProbeMaxBodyBytes+1))
-	if readErr != nil {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, resp.StatusCode, "response_read_failed", retryAfter(resp.Header, now))
-	}
-	if len(body) > upstreamBillingProbeMaxBodyBytes {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, resp.StatusCode, "response_too_large", retryAfter(resp.Header, now))
-	}
-	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusMethodNotAllowed {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, resp.StatusCode, "unsupported", retryAfter(resp.Header, now))
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, resp.StatusCode, "http_error", retryAfter(resp.Header, now))
+	if reason != "" {
+		return s.persistProbeFailure(ctx, account, intervalMinutes, now, status, reason, retry)
 	}
 	data, err := parseUpstreamBillingProbeResponse(body)
 	if err != nil {
-		return s.persistProbeFailure(ctx, account, intervalMinutes, now, resp.StatusCode, "invalid_response", retryAfter(resp.Header, now))
+		return s.persistProbeFailure(ctx, account, intervalMinutes, now, status, "invalid_response", retry)
 	}
 	snapshot := &UpstreamBillingProbeSnapshot{
 		Status:        UpstreamBillingProbeStatusOK,
@@ -709,7 +637,7 @@ func (s *UpstreamBillingProbeService) probeLoadedAccount(ctx context.Context, ac
 		FreshUntil:    probeTimePtr(now.Add(2 * time.Duration(intervalMinutes) * time.Minute)),
 		LastAttemptAt: now,
 		NextProbeAt:   now.Add(nextProbeDelay(intervalMinutes, 0)),
-		HTTPStatus:    resp.StatusCode,
+		HTTPStatus:    status,
 	}
 	// 账号级值域与精度只在真要写回时才有影响：只观察上游声明、未开启同步的
 	// 账号不因声明值不适配 accounts.rate_multiplier 而被记成探测失败并进入

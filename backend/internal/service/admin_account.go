@@ -411,6 +411,11 @@ func normalizeOpenAILongContextBillingUpdateExtra(account *Account, input *Updat
 // Grok media eligibility helpers live in account_grok_media_eligibility.go.
 
 func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]any) (*Account, error) {
+	if err := validateUpstreamBalanceExtra(accountExtra, input.Platform, input.Type); err != nil {
+		return nil, err
+	}
+	delete(accountExtra, UpstreamBalanceProbeExtraKey)
+	delete(accountExtra, UpstreamBalanceProbeRevisionExtraKey)
 	if input.Platform == PlatformTypeSafe && input.Type != AccountTypeAPIKey {
 		return nil, errors.New("typesafe accounts only support apikey credentials")
 	}
@@ -665,7 +670,17 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	// 关闭配额限制时前端会删除 quota_* 键并提交 extra:{}，此时也必须落库。
 	requestedProbeEnabledUpdate := input.ProbeEnabled
 	requestedRateSyncEnabledUpdate := input.RateSyncEnabled
+	var requestedBalanceType *string
 	if input.Extra != nil {
+		if err := validateUpstreamBalanceExtra(normalizedExtra, account.Platform, account.Type); err != nil {
+			return nil, err
+		}
+		if value, ok := normalizedExtra[UpstreamBalanceProbeTypeExtraKey].(string); ok {
+			requestedBalanceType = &value
+		}
+		delete(normalizedExtra, UpstreamBalanceProbeTypeExtraKey)
+		delete(normalizedExtra, UpstreamBalanceProbeExtraKey)
+		delete(normalizedExtra, UpstreamBalanceProbeRevisionExtraKey)
 		requestedProbeEnabled, hasRequestedProbeEnabled := normalizedExtra[UpstreamBillingProbeEnabledExtraKey]
 		if hasRequestedProbeEnabled {
 			enabled, ok := requestedProbeEnabled.(bool)
@@ -696,6 +711,8 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 			UpstreamBillingProbeEnabledExtraKey,
 			UpstreamBillingRateSyncEnabledExtraKey,
 			UpstreamBillingProbeExtraKey,
+			UpstreamBalanceProbeTypeExtraKey,
+			UpstreamBalanceProbeExtraKey,
 			OllamaCloudUsageSessionExtraKey,
 			OllamaCloudUsageAutoRefreshExtraKey,
 			OllamaCloudUsageSnapshotExtraKey,
@@ -729,6 +746,15 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	}
 	if input.Extra == nil {
 		account.Extra = prepareCodexFingerprintExtraForUpdate(account, account.Extra)
+	}
+	if requestedBalanceType != nil {
+		if account.Extra == nil {
+			account.Extra = make(map[string]any)
+		}
+		if account.Extra[UpstreamBalanceProbeTypeExtraKey] != *requestedBalanceType || *requestedBalanceType == "disabled" {
+			delete(account.Extra, UpstreamBalanceProbeExtraKey)
+		}
+		account.Extra[UpstreamBalanceProbeTypeExtraKey] = *requestedBalanceType
 	}
 	if requestedRateSyncEnabledUpdate != nil && *requestedRateSyncEnabledUpdate {
 		if requestedProbeEnabledUpdate != nil && !*requestedProbeEnabledUpdate {
@@ -772,7 +798,9 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	}
 	if !reflect.DeepEqual(previousProbeIdentity, upstreamBillingProbeIdentity(account)) && account.Extra != nil {
 		delete(account.Extra, UpstreamBillingProbeExtraKey)
+		delete(account.Extra, UpstreamBalanceProbeExtraKey)
 		if !isUpstreamBillingProbeAccount(account) {
+			delete(account.Extra, UpstreamBalanceProbeTypeExtraKey)
 			delete(account.Extra, UpstreamBillingProbeEnabledExtraKey)
 			delete(account.Extra, UpstreamBillingRateSyncEnabledExtraKey)
 		}
@@ -876,6 +904,7 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 			requestedProbeEnabledUpdate,
 			requestedRateSyncEnabledUpdate,
 			input.RateMultiplier,
+			requestedBalanceType,
 		); err != nil {
 			return nil, err
 		}
@@ -927,6 +956,17 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 // （如 model_rate_limits / passive_usage_* 等）。
 func (s *adminServiceImpl) UpdateAccountExtra(ctx context.Context, id int64, updates map[string]any) error {
 	updates = sanitizedCodexFingerprintExtraUpdates(updates)
+	delete(updates, UpstreamBalanceProbeExtraKey)
+	delete(updates, UpstreamBalanceProbeRevisionExtraKey)
+	if _, exists := updates[UpstreamBalanceProbeTypeExtraKey]; exists {
+		account, err := s.accountRepo.GetByID(ctx, id)
+		if err != nil {
+			return err
+		}
+		if err := validateUpstreamBalanceExtra(updates, account.Platform, account.Type); err != nil {
+			return err
+		}
+	}
 	updates = stripOpenAIAutoResetCreditManagedExtra(updates, true)
 	delete(updates, UpstreamBillingProbeEnabledExtraKey)
 	delete(updates, UpstreamBillingRateSyncEnabledExtraKey)
@@ -956,6 +996,14 @@ func (s *adminServiceImpl) UpdateAccountExtra(ctx context.Context, id int64, upd
 func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error) {
 	// Managed probe/session state may only enter through dedicated typed endpoints.
 	input.Extra = sanitizedCodexFingerprintExtraUpdates(input.Extra)
+	delete(input.Extra, UpstreamBalanceProbeExtraKey)
+	delete(input.Extra, UpstreamBalanceProbeRevisionExtraKey)
+	_, hasBalanceType := input.Extra[UpstreamBalanceProbeTypeExtraKey]
+	if hasBalanceType {
+		if err := ValidateUpstreamBalanceProbeType(input.Extra[UpstreamBalanceProbeTypeExtraKey]); err != nil {
+			return nil, err
+		}
+	}
 	input.Extra = stripOpenAIAutoResetCreditManagedExtra(input.Extra, true)
 	delete(input.Extra, UpstreamBillingProbeEnabledExtraKey)
 	delete(input.Extra, UpstreamBillingRateSyncEnabledExtraKey)
@@ -1000,7 +1048,7 @@ func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUp
 
 	// 预取所有目标账号，供凭据守卫/代理守卫/混合渠道检查共用，避免多次 DB 查询。
 	var cachedTargets []*Account
-	if len(input.Credentials) > 0 || input.ProxyID != nil || needMixedChannelCheck || openAISettings.any() || input.ProbeEnabled != nil || input.RateMultiplier != nil {
+	if len(input.Credentials) > 0 || input.ProxyID != nil || needMixedChannelCheck || openAISettings.any() || input.ProbeEnabled != nil || input.RateMultiplier != nil || hasBalanceType {
 		loaded, err := s.accountRepo.GetByIDs(ctx, input.AccountIDs)
 		if err != nil {
 			return nil, err
@@ -1011,6 +1059,9 @@ func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUp
 	for _, account := range cachedTargets {
 		if account != nil {
 			targetsByID[account.ID] = account
+			if err := validateUpstreamBalanceExtra(input.Extra, account.Platform, account.Type); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if openAISettings.any() {
@@ -1134,6 +1185,7 @@ func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUp
 		// JSON null makes every reader treat the old snapshot as absent and lets the
 		// next enabled runner cycle probe the new upstream identity immediately.
 		repoUpdates.Extra[UpstreamBillingProbeExtraKey] = nil
+		repoUpdates.Extra[UpstreamBalanceProbeExtraKey] = nil
 	}
 	if input.Name != "" {
 		repoUpdates.Name = &input.Name

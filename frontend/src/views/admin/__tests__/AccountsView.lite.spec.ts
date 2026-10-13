@@ -11,6 +11,8 @@ const {
   getById,
   getBatchTodayStats,
   getUpstreamBillingProbeSettings,
+  getUpstreamBillingRatesWithEtag,
+  probeUpstreamBalance,
   getAllProxies,
   getAllGroups,
   refreshCredentials,
@@ -22,6 +24,8 @@ const {
   getById: vi.fn(),
   getBatchTodayStats: vi.fn(),
   getUpstreamBillingProbeSettings: vi.fn(),
+  getUpstreamBillingRatesWithEtag: vi.fn(),
+  probeUpstreamBalance: vi.fn(),
   getAllProxies: vi.fn(),
   getAllGroups: vi.fn(),
   refreshCredentials: vi.fn(),
@@ -37,6 +41,8 @@ vi.mock('@/api/admin', () => ({
       listWithEtag,
       getBatchTodayStats,
       getUpstreamBillingProbeSettings,
+      getUpstreamBillingRatesWithEtag,
+      probeUpstreamBalance,
       delete: vi.fn(),
       batchClearError: vi.fn(),
       batchRefresh: vi.fn(),
@@ -68,6 +74,7 @@ const DataTableStub = defineComponent({
       <div v-for="row in data" :key="row.id" :data-account-name="row.name">
         <slot name="cell-groups" :row="row" />
         <slot name="cell-actions" :row="row" />
+        <slot name="cell-upstream_balance" :row="row" />
       </div>
     </div>
   `
@@ -126,6 +133,10 @@ function mountView(stubActionMenu = true) {
         AccountGroupsCell: AccountGroupsCellStub,
         AccountUsageCell: true,
         UpstreamBillingRateCell: true,
+        UpstreamBalanceCell: {
+          props: ['account', 'loading'],
+          template: '<button data-test="balance-probe" :disabled="loading" @click="$emit(\'probe\')">{{ account.extra?.upstream_balance_probe?.data?.remaining }}</button>'
+        },
         HelpTooltip: true,
         Icon: true,
         Teleport: stubActionMenu
@@ -164,6 +175,8 @@ describe('admin AccountsView lite account list', () => {
     getById.mockReset().mockResolvedValue(fullAccount)
     getBatchTodayStats.mockReset().mockResolvedValue({ stats: {} })
     getUpstreamBillingProbeSettings.mockReset().mockResolvedValue({ enabled: true })
+    getUpstreamBillingRatesWithEtag.mockReset().mockResolvedValue({ notModified: true, data: null })
+    probeUpstreamBalance.mockReset()
     getAllProxies.mockReset().mockResolvedValue([])
     getAllGroups.mockReset().mockResolvedValue([{ id: 7, name: 'codex', platform: 'openai' }])
     refreshCredentials.mockReset()
@@ -234,6 +247,33 @@ describe('admin AccountsView lite account list', () => {
       expect.objectContaining({ lite: '1' }),
       expect.objectContaining({ etag: null })
     )
+    wrapper.unmount()
+  })
+
+  it('手动余额刷新后拒绝迟到的后台快照', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+    const balanceRow = {
+      ...listRow,
+      type: 'apikey',
+      extra: { upstream_balance_probe_type: 'wallet' }
+    }
+    listAccounts.mockResolvedValue({ items: [balanceRow], total: 1, page: 1, page_size: 20, pages: 1 })
+    let resolvePoll!: (value: unknown) => void
+    getUpstreamBillingRatesWithEtag.mockImplementationOnce(() => new Promise(resolve => { resolvePoll = resolve }))
+    probeUpstreamBalance.mockResolvedValue({ account_id: 42, snapshot: { type: 'wallet', status: 'ok', data: { remaining: 20 } } })
+    const wrapper = mountView()
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(300_000)
+    expect(getUpstreamBillingRatesWithEtag).toHaveBeenCalledTimes(1)
+
+    await wrapper.get('[data-test="balance-probe"]').trigger('click')
+    await flushPromises()
+    expect(probeUpstreamBalance).toHaveBeenCalledWith(42)
+    expect(wrapper.get('[data-test="balance-probe"]').text()).toBe('20')
+    resolvePoll({ notModified: false, data: { total: 1, items: [{ account_id: 42, balance_snapshot: { type: 'wallet', status: 'ok', data: { remaining: 10 } } }] } })
+    await flushPromises()
+    expect(wrapper.get('[data-test="balance-probe"]').text()).toBe('20')
     wrapper.unmount()
   })
 

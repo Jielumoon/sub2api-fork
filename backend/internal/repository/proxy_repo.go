@@ -226,12 +226,18 @@ func invalidateProxyProbeSnapshots(ctx context.Context, exec sqlExecutor, proxyI
 		UPDATE accounts
 		SET extra = COALESCE(extra, '{}'::jsonb)
 				- 'upstream_billing_probe'
+				- 'upstream_balance_probe'
 				- 'ollama_cloud_usage_snapshot'
-				- 'opencode_go_usage_snapshot',
+				- 'opencode_go_usage_snapshot'
+				|| CASE WHEN COALESCE(extra ->> 'upstream_balance_probe_type', 'disabled') <> 'disabled'
+					THEN jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)
+					ELSE '{}'::jsonb END,
 			updated_at = NOW()
 		WHERE proxy_id = $1
 			AND type = 'apikey'
 			AND (
+				(COALESCE(extra ->> 'upstream_balance_probe_type', 'disabled') <> 'disabled')
+				OR
 				(extra ? 'upstream_billing_probe'
 					AND extra -> 'upstream_billing_probe' <> 'null'::jsonb)
 				OR (platform IN (`+ollamaCloudUsagePlatformsSQL+`)
@@ -766,8 +772,10 @@ func (r *proxyRepository) sweepOneExpiredProxyOnExec(ctx context.Context, exec s
 		rows, err = exec.QueryContext(ctx, `
 			UPDATE accounts SET proxy_id=NULL, proxy_fallback_origin_id=COALESCE(proxy_fallback_origin_id,$1),
 				extra=CASE
-					WHEN type='apikey' AND extra ? 'upstream_billing_probe'
-					THEN extra - 'upstream_billing_probe'
+					WHEN type='apikey' AND (extra ? 'upstream_billing_probe'
+						OR COALESCE(extra ->> 'upstream_balance_probe_type', 'disabled') <> 'disabled')
+					THEN extra - 'upstream_billing_probe' - 'upstream_balance_probe'
+						|| jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)
 					ELSE extra
 				END,
 				updated_at=NOW()
@@ -777,8 +785,10 @@ func (r *proxyRepository) sweepOneExpiredProxyOnExec(ctx context.Context, exec s
 		rows, err = exec.QueryContext(ctx, `
 			UPDATE accounts SET proxy_id=$2, proxy_fallback_origin_id=COALESCE(proxy_fallback_origin_id,$1),
 				extra=CASE
-					WHEN type='apikey' AND extra ? 'upstream_billing_probe'
-					THEN extra - 'upstream_billing_probe'
+					WHEN type='apikey' AND (extra ? 'upstream_billing_probe'
+						OR COALESCE(extra ->> 'upstream_balance_probe_type', 'disabled') <> 'disabled')
+					THEN extra - 'upstream_billing_probe' - 'upstream_balance_probe'
+						|| jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)
 					ELSE extra
 				END,
 				updated_at=NOW()

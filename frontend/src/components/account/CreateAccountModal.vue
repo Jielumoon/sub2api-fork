@@ -1212,6 +1212,7 @@
             :aria-label="t('admin.accounts.upstreamBilling.autoProbe')"
           />
         </div>
+        <UpstreamBalanceProbeSelect v-model="upstreamBalanceProbeType" />
       </div>
 
       <!-- Vertex Service Account -->
@@ -1578,6 +1579,8 @@
             :aria-label="t('admin.accounts.upstreamBilling.autoProbe')"
           />
         </div>
+
+        <UpstreamBalanceProbeSelect v-model="upstreamBalanceProbeType" />
 
         <!-- Gemini API Key tier selection -->
         <div v-if="form.platform === 'gemini' && isOfficialGeminiBaseUrl(apiKeyBaseUrl)">
@@ -4154,6 +4157,8 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import HelpTooltip from '@/components/common/HelpTooltip.vue'
 import UpstreamRequestIdHeaderField from '@/components/account/UpstreamRequestIdHeaderField.vue'
+import UpstreamBalanceProbeSelect from '@/components/account/UpstreamBalanceProbeSelect.vue'
+import type { UpstreamBalanceProbeType } from '@/types'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
@@ -4395,6 +4400,7 @@ const addMethod = ref<AddMethod>('oauth') // For oauth-based: 'oauth' or 'setup-
 const apiKeyBaseUrl = ref('https://api.anthropic.com')
 const apiKeyValue = ref('')
 const upstreamBillingAutoProbeEnabled = ref(true)
+const upstreamBalanceProbeType = ref<UpstreamBalanceProbeType>('disabled')
 
 // ── 国产供应商（Kimi / Zhipu / DeepSeek）账号类型、API 协议与端点 ──
 // 多协议供应商（国产厂商与走通用表单的供应商）的接入模式；OpenCode 用 openCodeAccountMode。
@@ -5555,6 +5561,9 @@ const ensureAntigravityMixedChannelConfirmed = async (onConfirm: () => Promise<v
 const submitCreateAccount = async (payload: CreateAccountRequest) => {
   submitting.value = true
   try {
+    if (payload.type === 'apikey' && upstreamBalanceProbeType.value !== 'disabled') {
+      payload.extra = { ...payload.extra, upstream_balance_probe_type: upstreamBalanceProbeType.value }
+    }
     const account = await adminAPI.accounts.create(withAntigravityConfirmFlag(payload))
     const modelMapping = payload.credentials.model_mapping
     const hasConcreteMappedTarget = payload.type === 'apikey' &&
@@ -5632,6 +5641,7 @@ const resetForm = () => {
   apiKeyValue.value = ''
   upstreamRequestIdHeader.value = ''
   upstreamBillingAutoProbeEnabled.value = true
+  upstreamBalanceProbeType.value = 'disabled'
   editQuotaLimit.value = null
   editQuotaDailyLimit.value = null
   editQuotaWeeklyLimit.value = null

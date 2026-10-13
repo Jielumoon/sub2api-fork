@@ -1164,6 +1164,9 @@ func reconcileCRSUpstreamBillingProbeExtra(
 		UpstreamBillingProbeEnabledExtraKey,
 		UpstreamBillingRateSyncEnabledExtraKey,
 		UpstreamBillingProbeExtraKey,
+		UpstreamBalanceProbeTypeExtraKey,
+		UpstreamBalanceProbeExtraKey,
+		UpstreamBalanceProbeRevisionExtraKey,
 		OllamaCloudUsageSessionExtraKey,
 		OllamaCloudUsageAutoRefreshExtraKey,
 		OllamaCloudUsageSnapshotExtraKey,
@@ -1175,6 +1178,9 @@ func reconcileCRSUpstreamBillingProbeExtra(
 	}
 	target := &Account{Platform: targetPlatform, Type: targetType, Credentials: targetCredentials}
 	if IsUpstreamBillingProbeIdentity(targetPlatform, targetType) {
+		if kind, ok := existing.Extra[UpstreamBalanceProbeTypeExtraKey]; ok {
+			extra[UpstreamBalanceProbeTypeExtraKey] = kind
+		}
 		probeEnabled := false
 		if enabled, ok := existing.Extra[UpstreamBillingProbeEnabledExtraKey]; ok {
 			extra[UpstreamBillingProbeEnabledExtraKey] = enabled
@@ -1184,6 +1190,9 @@ func reconcileCRSUpstreamBillingProbeExtra(
 			extra[UpstreamBillingRateSyncEnabledExtraKey] = enabled && probeEnabled
 		}
 		if reflect.DeepEqual(upstreamBillingProbeIdentity(existing), upstreamBillingProbeIdentity(target)) {
+			if snapshot, ok := existing.Extra[UpstreamBalanceProbeExtraKey]; ok {
+				extra[UpstreamBalanceProbeExtraKey] = snapshot
+			}
 			if snapshot, ok := existing.Extra[UpstreamBillingProbeExtraKey]; ok {
 				extra[UpstreamBillingProbeExtraKey] = snapshot
 			}
