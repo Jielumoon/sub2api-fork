@@ -2109,8 +2109,6 @@
         />
       </div>
 
-      <UpstreamBalanceProbeSelect v-if="account?.type === 'apikey'" v-model="upstreamBalanceProbeType" />
-
       <OllamaCloudUsageSettings
         v-if="account?.ollama_cloud_usage?.eligible"
         :account="account"
@@ -3256,8 +3254,6 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import HelpTooltip from '@/components/common/HelpTooltip.vue'
 import UpstreamRequestIdHeaderField from '@/components/account/UpstreamRequestIdHeaderField.vue'
-import UpstreamBalanceProbeSelect from '@/components/account/UpstreamBalanceProbeSelect.vue'
-import type { UpstreamBalanceProbeType } from '@/types'
 import Toggle from '@/components/common/Toggle.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
@@ -3784,7 +3780,6 @@ const autoResetCreditEnabled = ref(false)
 const autoResetCredit5hThreshold = ref(100)
 const autoResetCredit7dThreshold = ref(100)
 const upstreamBillingAutoProbeEnabled = ref(false)
-const upstreamBalanceProbeType = ref<UpstreamBalanceProbeType>('disabled')
 const upstreamBillingRateSyncEnabled = ref(false)
 const mixedScheduling = ref(false) // For antigravity accounts: enable mixed scheduling
 // 上游ID：直接上游声明请求标识的响应头名，留空不记录。
@@ -4344,7 +4339,6 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 	autoResetCredit7dThreshold.value =
 		typeof extra?.auto_reset_credit_7d_threshold === 'number' ? extra.auto_reset_credit_7d_threshold * 100 : 100
 	upstreamBillingAutoProbeEnabled.value = extra?.upstream_billing_probe_enabled === true
-  upstreamBalanceProbeType.value = props.account?.extra?.upstream_balance_probe_type ?? 'disabled'
   upstreamBillingRateSyncEnabled.value =
     upstreamBillingAutoProbeEnabled.value && extra?.upstream_billing_rate_sync_enabled === true
 
@@ -6025,8 +6019,6 @@ const handleSubmit = async () => {
       if (props.account.type === 'apikey') {
         delete newExtra.upstream_billing_probe_enabled
         delete newExtra.upstream_billing_rate_sync_enabled
-        delete newExtra.upstream_balance_probe
-        newExtra.upstream_balance_probe_type = upstreamBalanceProbeType.value
       }
       // Total quota
       if (editQuotaLimit.value != null && editQuotaLimit.value > 0) {

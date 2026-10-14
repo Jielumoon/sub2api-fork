@@ -28,7 +28,6 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
-	"github.com/google/uuid"
 	"github.com/lib/pq"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -60,7 +59,6 @@ var schedulerNeutralExtraKeyPrefixes = []string{
 	"codex_reset_credit_",
 	"passive_usage_",
 	"upstream_billing_probe",
-	"upstream_balance_probe",
 	"upstream_billing_rate_sync",
 	"ollama_cloud_usage",
 }
@@ -453,9 +451,8 @@ func (r *accountRepository) UpdateWithAccountBillingSettings(
 	probeEnabled *bool,
 	rateSyncEnabled *bool,
 	rateMultiplier *float64,
-	balanceType ...*string,
 ) error {
-	return r.updateAccount(ctx, account, probeEnabled, rateSyncEnabled, rateMultiplier, balanceType...)
+	return r.updateAccount(ctx, account, probeEnabled, rateSyncEnabled, rateMultiplier)
 }
 
 func (r *accountRepository) updateAccount(
@@ -464,7 +461,6 @@ func (r *accountRepository) updateAccount(
 	explicitProbeEnabled *bool,
 	explicitRateSyncEnabled *bool,
 	explicitRateMultiplier *float64,
-	balanceType ...*string,
 ) error {
 	if account == nil {
 		return nil
@@ -496,7 +492,6 @@ func (r *accountRepository) updateAccount(
 		explicitProbeEnabled,
 		explicitRateSyncEnabled,
 		explicitRateMultiplier,
-		balanceType...,
 	)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrAccountNotFound, nil)
@@ -526,9 +521,8 @@ func (r *accountRepository) updateLockedAccount(
 	explicitProbeEnabled *bool,
 	explicitRateSyncEnabled *bool,
 	explicitRateMultiplier *float64,
-	balanceType ...*string,
 ) (*dbent.Account, error) {
-	extra, err := lockAndMergeAccountProbeExtra(ctx, client, account, explicitProbeEnabled, explicitRateSyncEnabled, balanceType...)
+	extra, err := lockAndMergeAccountProbeExtra(ctx, client, account, explicitProbeEnabled, explicitRateSyncEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -623,7 +617,6 @@ func lockAndMergeAccountProbeExtra(
 	account *service.Account,
 	explicitProbeEnabled *bool,
 	explicitRateSyncEnabled *bool,
-	balanceType ...*string,
 ) (map[string]any, error) {
 	credentials, err := json.Marshal(normalizeJSONMap(account.Credentials))
 	if err != nil {
@@ -677,10 +670,7 @@ func lockAndMergeAccountProbeExtra(
 				false
 			),
 			extra -> 'opencode_go_usage_auto_refresh',
-			extra -> 'opencode_go_usage_snapshot',
-			extra -> 'upstream_balance_probe_type',
-			extra -> 'upstream_balance_probe',
-			extra -> 'upstream_balance_probe_revision'
+			extra -> 'opencode_go_usage_snapshot'
 		FROM accounts
 		WHERE id = $1 AND deleted_at IS NULL
 		FOR NO KEY UPDATE
@@ -709,9 +699,6 @@ func lockAndMergeAccountProbeExtra(
 		currentOllamaSnapshot          []byte
 		currentOpenCodeAutoRefresh     []byte
 		currentOpenCodeSnapshot        []byte
-		currentBalanceType             []byte
-		currentBalanceSnapshot         []byte
-		currentBalanceRevision         []byte
 	)
 	if err := rows.Scan(
 		&identityUnchanged,
@@ -726,9 +713,6 @@ func lockAndMergeAccountProbeExtra(
 		&opencodeGroupIdentityUnchanged,
 		&currentOpenCodeAutoRefresh,
 		&currentOpenCodeSnapshot,
-		&currentBalanceType,
-		&currentBalanceSnapshot,
-		&currentBalanceRevision,
 	); err != nil {
 		return nil, err
 	}
@@ -741,9 +725,6 @@ func lockAndMergeAccountProbeExtra(
 		service.UpstreamBillingProbeEnabledExtraKey,
 		service.UpstreamBillingRateSyncEnabledExtraKey,
 		service.UpstreamBillingProbeExtraKey,
-		service.UpstreamBalanceProbeTypeExtraKey,
-		service.UpstreamBalanceProbeExtraKey,
-		service.UpstreamBalanceProbeRevisionExtraKey,
 		service.OllamaCloudUsageSessionExtraKey,
 		service.OllamaCloudUsageAutoRefreshExtraKey,
 		service.OllamaCloudUsageSnapshotExtraKey,
@@ -753,38 +734,6 @@ func lockAndMergeAccountProbeExtra(
 		delete(extra, key)
 	}
 	probeAccount := service.IsUpstreamBillingProbeIdentity(account.Platform, account.Type)
-	if probeAccount {
-		current, _, err := decodeAccountExtraJSON(currentBalanceType)
-		if err != nil {
-			return nil, err
-		}
-		selected, _ := current.(string)
-		previousType := selected
-		if len(balanceType) > 0 && balanceType[0] != nil {
-			selected = *balanceType[0]
-		}
-		if selected != "" {
-			if err := service.ValidateUpstreamBalanceProbeType(selected); err != nil {
-				return nil, err
-			}
-			extra[service.UpstreamBalanceProbeTypeExtraKey] = selected
-		}
-		if revision, ok, err := decodeAccountExtraJSON(currentBalanceRevision); err != nil {
-			return nil, err
-		} else if ok {
-			extra[service.UpstreamBalanceProbeRevisionExtraKey] = revision
-		}
-		if (previousType != "" || selected != "") && (!identityUnchanged || selected != previousType) {
-			extra[service.UpstreamBalanceProbeRevisionExtraKey] = uuid.NewString()
-		}
-		if identityUnchanged && selected != "disabled" && selected != "" && selected == current {
-			if snapshot, ok, err := decodeAccountExtraJSON(currentBalanceSnapshot); err != nil {
-				return nil, err
-			} else if ok {
-				extra[service.UpstreamBalanceProbeExtraKey] = snapshot
-			}
-		}
-	}
 	probeEnabled := false
 	probeEnabledPresent := false
 	if probeAccount {
@@ -952,7 +901,6 @@ func (r *accountRepository) UpdateCredentials(ctx context.Context, id int64, cre
 					)
 				THEN COALESCE(extra, '{}'::jsonb)
 					- 'upstream_billing_probe'
-					- 'upstream_balance_probe'
 					- 'opencode_go_usage_auto_refresh'
 					- 'opencode_go_usage_snapshot'
 					- 'ollama_cloud_usage_session'
@@ -972,7 +920,6 @@ func (r *accountRepository) UpdateCredentials(ctx context.Context, id int64, cre
 					)
 				THEN COALESCE(extra, '{}'::jsonb)
 					- 'upstream_billing_probe'
-					- 'upstream_balance_probe'
 					- 'ollama_cloud_usage_session'
 					- 'ollama_cloud_usage_auto_refresh'
 					- 'ollama_cloud_usage_snapshot'
@@ -980,12 +927,9 @@ func (r *accountRepository) UpdateCredentials(ctx context.Context, id int64, cre
 				-- 身份变化，丢弃 stale 快照。
 				WHEN type = 'apikey'
 					AND credentials IS DISTINCT FROM $1::jsonb
-				THEN COALESCE(extra, '{}'::jsonb) - 'upstream_billing_probe' - 'upstream_balance_probe'
+				THEN COALESCE(extra, '{}'::jsonb) - 'upstream_billing_probe'
 				ELSE extra
-			END || CASE WHEN type = 'apikey' AND credentials IS DISTINCT FROM $1::jsonb
-				AND COALESCE(extra ->> 'upstream_balance_probe_type', 'disabled') <> 'disabled'
-				THEN jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)
-				ELSE '{}'::jsonb END,
+			END,
 			updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL
 	`, string(payload), id)
@@ -2817,9 +2761,6 @@ func (r *accountRepository) UpdateExtra(ctx context.Context, id int64, updates m
 		}
 	}
 	extraExpression := "COALESCE(extra, '{}'::jsonb) || $1::jsonb"
-	if _, changed := updates[service.UpstreamBalanceProbeTypeExtraKey]; changed {
-		extraExpression = "(" + extraExpression + ") - 'upstream_balance_probe' || jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)"
-	}
 	if clearProbeSnapshot {
 		extraExpression = "(" + extraExpression + ") - 'upstream_billing_probe'"
 	}
@@ -3208,12 +3149,6 @@ func (r *accountRepository) BulkUpdate(ctx context.Context, ids []int64, updates
 			idx++
 			if upstreamBillingProbeExplicitlyDisabled(updates.Extra) || upstreamBillingProbeSnapshotClearRequested(updates.Extra) {
 				extraExpression = "(" + extraExpression + ") - 'upstream_billing_probe'"
-			}
-			if _, changed := updates.Extra[service.UpstreamBalanceProbeTypeExtraKey]; changed {
-				extraExpression = "(" + extraExpression + ") - 'upstream_balance_probe' || jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)"
-			}
-			if value, clear := updates.Extra[service.UpstreamBalanceProbeExtraKey]; clear && value == nil {
-				extraExpression = "(" + extraExpression + ") - 'upstream_balance_probe' || jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)"
 			}
 			if ollamaCloudUsageSnapshotClearRequested(updates.Extra) {
 				extraExpression = "(" + extraExpression + ") - 'ollama_cloud_usage_snapshot'"
@@ -3844,16 +3779,6 @@ func (r *accountRepository) ListDueUpstreamBillingProbeAccounts(ctx context.Cont
 				AND status = 'active'
 				AND type = 'apikey'
 				AND extra @> '{"upstream_billing_probe_enabled": true}'::jsonb
-			UNION ALL
-			SELECT id,
-				CASE WHEN extra #>> '{upstream_balance_probe,type}' = extra ->> 'upstream_balance_probe_type'
-					THEN extra #>> '{upstream_balance_probe,status}' END,
-				extra #>> '{upstream_balance_probe,next_probe_at}'
-			FROM accounts
-			WHERE deleted_at IS NULL AND status = 'active' AND type = 'apikey'
-				AND extra ->> 'upstream_balance_probe_type' IN (
-					'wallet', 'key_total', 'key_5h', 'key_1d', 'key_7d',
-					'subscription_daily', 'subscription_weekly', 'subscription_monthly', 'subscription_remaining')
 		), parsed AS MATERIALIZED (
 			SELECT
 				id,
@@ -3885,22 +3810,21 @@ func (r *accountRepository) ListDueUpstreamBillingProbeAccounts(ctx context.Cont
 		)
 		SELECT id
 		FROM normalized
-		WHERE probe_status NOT IN ('ok', 'unsupported', 'unavailable', 'failed')
+		WHERE probe_status NOT IN ('ok', 'unsupported', 'failed')
 			OR probe_status IS NULL
 			OR next_probe_at IS NULL
 			OR NOT valid_next_probe_at
 			OR CASE WHEN valid_next_probe_at THEN parsed_next_probe_at::timestamptz <= $1 ELSE FALSE END
-		GROUP BY id
 		ORDER BY
-			MIN(CASE
-				WHEN probe_status NOT IN ('ok', 'unsupported', 'unavailable', 'failed')
+			CASE
+				WHEN probe_status NOT IN ('ok', 'unsupported', 'failed')
 					OR probe_status IS NULL
 					OR next_probe_at IS NULL
 					OR NOT valid_next_probe_at
 				THEN 0
 				ELSE 1
-			END) ASC,
-			MIN(CASE WHEN valid_next_probe_at THEN parsed_next_probe_at::timestamptz END) ASC NULLS FIRST,
+			END ASC,
+			CASE WHEN valid_next_probe_at THEN parsed_next_probe_at::timestamptz END ASC NULLS FIRST,
 			id ASC
 		LIMIT $2
 	`, now.UTC(), limit)
@@ -4137,9 +4061,7 @@ func (r *accountRepository) RevertProxyFallback(ctx context.Context, accountID i
 	res, err := r.sql.ExecContext(ctx, `
 		UPDATE accounts SET
 			extra=CASE WHEN type='apikey' AND proxy_id IS DISTINCT FROM proxy_fallback_origin_id
-				THEN extra - 'upstream_billing_probe' - 'upstream_balance_probe'
-					|| jsonb_build_object('upstream_balance_probe_revision', gen_random_uuid()::text)
-				ELSE extra END,
+				THEN extra - 'upstream_billing_probe' ELSE extra END,
 			proxy_id=proxy_fallback_origin_id, proxy_fallback_origin_id=NULL, updated_at=NOW()
 		WHERE id=$1 AND proxy_fallback_origin_id IS NOT NULL AND deleted_at IS NULL`, accountID)
 	if err != nil {

@@ -130,9 +130,8 @@ type UpstreamBillingProbeResult struct {
 // account table's background refresh. It intentionally excludes credentials,
 // runtime counters, and usage data from the response.
 type UpstreamBillingRateSnapshotItem struct {
-	AccountID       int64                         `json:"account_id"`
-	Snapshot        *UpstreamBillingProbeSnapshot `json:"snapshot"`
-	BalanceSnapshot *UpstreamBalanceProbeSnapshot `json:"balance_snapshot"`
+	AccountID int64                         `json:"account_id"`
+	Snapshot  *UpstreamBillingProbeSnapshot `json:"snapshot"`
 }
 
 // BuildUpstreamBillingRateSnapshotItems projects account rows into the
@@ -149,9 +148,8 @@ func BuildUpstreamBillingRateSnapshotItems(accounts []Account) []UpstreamBilling
 			snapshot = decodeUpstreamBillingProbeSnapshot(account.Extra)
 		}
 		items = append(items, UpstreamBillingRateSnapshotItem{
-			AccountID:       account.ID,
-			Snapshot:        snapshot,
-			BalanceSnapshot: DecodeUpstreamBalanceProbeSnapshot(&account),
+			AccountID: account.ID,
+			Snapshot:  snapshot,
 		})
 	}
 	return items
@@ -394,22 +392,30 @@ func (s *UpstreamBillingProbeService) RunDue(ctx context.Context) error {
 	due := make([]Account, 0, len(accounts))
 	for i := range accounts {
 		account := accounts[i]
-		if !isUpstreamBillingProbeAccount(&account) || !account.IsActive() {
+		if !isUpstreamBillingProbeAccount(&account) || !account.IsActive() || !upstreamBillingProbeEnabled(&account) {
 			continue
 		}
-		next, enabled := nextUpstreamAccountProbe(&account)
-		if !enabled || now.Before(next) {
+		snapshot := decodeUpstreamBillingProbeSnapshot(account.Extra)
+		if snapshot != nil && !snapshot.NextProbeAt.IsZero() && now.Before(snapshot.NextProbeAt) {
 			continue
 		}
 		due = append(due, account)
 	}
 	sort.SliceStable(due, func(i, j int) bool {
-		left, _ := nextUpstreamAccountProbe(&due[i])
-		right, _ := nextUpstreamAccountProbe(&due[j])
-		if left.Equal(right) {
+		left := decodeUpstreamBillingProbeSnapshot(due[i].Extra)
+		right := decodeUpstreamBillingProbeSnapshot(due[j].Extra)
+		leftUnset := left == nil || left.NextProbeAt.IsZero()
+		rightUnset := right == nil || right.NextProbeAt.IsZero()
+		if leftUnset && rightUnset {
 			return due[i].ID < due[j].ID
 		}
-		return left.Before(right)
+		if leftUnset {
+			return true
+		}
+		if rightUnset {
+			return false
+		}
+		return left.NextProbeAt.Before(right.NextProbeAt)
 	})
 	if len(due) > upstreamBillingProbeMaxPerCycle {
 		due = due[:upstreamBillingProbeMaxPerCycle]
@@ -421,9 +427,6 @@ func (s *UpstreamBillingProbeService) RunDue(ctx context.Context) error {
 		group.Go(func() error {
 			if _, probeErr := s.probeScheduledAccount(ctx, accountID, settings.IntervalMinutes); probeErr != nil {
 				logger.LegacyPrintf("service.upstream_billing_probe", "probe_due_failed: account_id=%d err=%v", accountID, probeErr)
-			}
-			if _, probeErr := s.probeBalanceAccount(ctx, accountID, settings.IntervalMinutes, true); probeErr != nil {
-				logger.LegacyPrintf("service.upstream_billing_probe", "balance_probe_due_failed: account_id=%d err=%v", accountID, probeErr)
 			}
 			return nil
 		})

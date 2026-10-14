@@ -1221,21 +1221,6 @@ describe('EditAccountModal', () => {
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.openai_responses_supported).toBe(false)
   })
 
-  it('回显余额口径并保存新选择，提交时不携带运行时快照', async () => {
-    const account = buildAccount()
-    account.extra = { upstream_balance_probe_type: 'wallet' }
-    updateAccountMock.mockReset().mockResolvedValue(account)
-    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false })
-    const wrapper = mountModal(account)
-    const select = wrapper.getComponent({ name: 'UpstreamBalanceProbeSelect' })
-    expect(select.props('modelValue')).toBe('wallet')
-    select.vm.$emit('update:modelValue', 'subscription_weekly')
-    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
-    expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.upstream_balance_probe_type).toBe('subscription_weekly')
-    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('upstream_balance_probe')
-    wrapper.unmount()
-  })
-
   it('submits the account upstream billing auto-probe setting', async () => {
     const account = buildAccount()
     updateAccountMock.mockReset()

@@ -337,25 +337,6 @@ export default {
           OLLAMA_CLOUD_USAGE_REFRESH_RATE_LIMITED: 'Refresh is limited. Try again in {retry_after_seconds} seconds.'
         }
       },
-      upstreamBalance: {
-        title: 'Upstream Balance / Quota',
-        hint: 'Refreshes on the global upstream probe interval, with manual refresh available in the account list. Only the selected quota returned by upstream is shown; quota-limited keys usually cannot expose wallet or subscription balances.',
-        refresh: 'Refresh upstream balance / quota',
-        pending: 'Awaiting probe',
-        unlimited: 'Unlimited',
-        updated: 'Updated',
-        lastSuccess: 'Last success',
-        paused: 'Scheduled probes paused globally',
-        limit: 'Limit', used: 'Used', resetsAt: 'Resets at', expiresAt: 'Expires at',
-        types: {
-          disabled: 'Disabled', wallet: 'Wallet balance', key_total: 'Key total quota',
-          key_5h: 'Key 5-hour quota', key_1d: 'Key daily quota', key_7d: 'Key weekly quota',
-          subscription_daily: 'Subscription daily quota', subscription_weekly: 'Subscription weekly quota',
-          subscription_monthly: 'Subscription monthly quota', subscription_remaining: 'Subscription remaining quota'
-        },
-        status: { unsupported: 'Upstream does not support this endpoint', unavailable: 'Selected quota not provided by upstream', failed: 'Probe failed; try refreshing later' },
-        upstreamStatus: { active: 'Upstream key active', disabled: 'Upstream key disabled', expired: 'Upstream key expired', quota_exhausted: 'Upstream key quota exhausted' }
-      },
       upstreamBilling: {
         trustWarning: 'This rate is declared by the upstream site for the current API key. Sub2API cannot verify that it matches actual charges. The upstream site or an intermediary may return forged, stale, or modified data. Verify it against bills, balance changes, and actual usage.',
         autoProbe: 'Automatically probe upstream declared rate',

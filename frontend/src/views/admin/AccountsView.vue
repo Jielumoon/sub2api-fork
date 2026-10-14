@@ -370,16 +370,6 @@
               </span>
             </div>
           </template>
-          <template #cell-upstream_balance="{ row }">
-            <UpstreamBalanceCell
-              :account="row"
-              :now="upstreamBillingNow"
-              :loading="probingUpstreamBalance.has(row.id)"
-              :global-probe-enabled="upstreamBillingProbeGloballyEnabled"
-              @probe="handleProbeUpstreamBalance(row)"
-            />
-          </template>
-
           <template #cell-upstream_billing_rate="{ row }">
             <UpstreamBillingRateCell
               :account="row"
@@ -535,7 +525,6 @@ import AccountTodayStatsCell from '@/components/account/AccountTodayStatsCell.vu
 import AccountGroupsCell from '@/components/account/AccountGroupsCell.vue'
 import AccountCapacityCell from '@/components/account/AccountCapacityCell.vue'
 import UpstreamBillingRateCell from '@/components/account/UpstreamBillingRateCell.vue'
-import UpstreamBalanceCell from '@/components/account/UpstreamBalanceCell.vue'
 import AccountPriorityCell from '@/components/account/AccountPriorityCell.vue'
 import PlatformTypeBadge from '@/components/common/PlatformTypeBadge.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -635,7 +624,6 @@ const menu = reactive<{show:boolean, acc:Account|null, anchorRect:DOMRect|null}>
 const exportingData = ref(false)
 const probingUpstreamBilling = reactive(new Set<number>())
 const upstreamBillingProbeGloballyEnabled = ref<boolean | undefined>(undefined)
-const probingUpstreamBalance = reactive(new Set<number>())
 const upstreamBillingNow = ref(Date.now())
 const upstreamBillingRateETag = ref<string | null>(null)
 const upstreamBillingRateRefreshing = ref(false)
@@ -1211,8 +1199,7 @@ const sameAccountIDOrder = (left: number[], right: number[]) =>
 const upstreamBillingRateContextKey = () => JSON.stringify({
   page: pagination.page,
   pageSize: pagination.page_size,
-  filters: buildUpstreamBillingRateFilters(),
-  balanceConfig: accounts.value.map(account => [account.id, account.updated_at, account.extra?.upstream_balance_probe_type])
+  filters: buildUpstreamBillingRateFilters()
 })
 
 const applyUpstreamBillingRateSnapshots = async (
@@ -1239,15 +1226,11 @@ const applyUpstreamBillingRateSnapshots = async (
     if (!item) return account
     const nextSnapshot = item.snapshot ?? null
     const previousSnapshot = account.extra?.upstream_billing_probe ?? null
-    const nextBalance = item.balance_snapshot?.type === account.extra?.upstream_balance_probe_type ? item.balance_snapshot : null
-    if (JSON.stringify(previousSnapshot) === JSON.stringify(nextSnapshot) &&
-        JSON.stringify(account.extra?.upstream_balance_probe ?? null) === JSON.stringify(nextBalance)) return account
+    if (JSON.stringify(previousSnapshot) === JSON.stringify(nextSnapshot)) return account
 
     const nextExtra = { ...(account.extra ?? {}) }
     if (nextSnapshot) nextExtra.upstream_billing_probe = nextSnapshot
     else delete nextExtra.upstream_billing_probe
-    if (nextBalance) nextExtra.upstream_balance_probe = nextBalance
-    else delete nextExtra.upstream_balance_probe
     const nextAccount = {
       ...account,
       ...(typeof nextSnapshot?.synced_rate_multiplier === 'number'
@@ -1270,7 +1253,6 @@ const refreshUpstreamBillingRates = async (force = false) => {
   if (upstreamBillingRateRefreshing.value || loading.value || accounts.value.length === 0) return
   if (!force && (
     probingUpstreamBilling.size > 0 ||
-    probingUpstreamBalance.size > 0 ||
     isAnyModalOpen.value ||
     menu.show ||
     showAccountToolsDropdown.value ||
@@ -1290,7 +1272,7 @@ const refreshUpstreamBillingRates = async (force = false) => {
       buildUpstreamBillingRateFilters(),
       { etag: force ? null : upstreamBillingRateETag.value, signal: controller.signal }
     )
-    if (controller.signal.aborted || loading.value || requestContextKey !== upstreamBillingRateContextKey()) return
+    if (loading.value || requestContextKey !== upstreamBillingRateContextKey()) return
     if (result.etag) upstreamBillingRateETag.value = result.etag
     if (!result.notModified && result.data) await applyUpstreamBillingRateSnapshots(result.data)
   } catch (error) {
@@ -1305,12 +1287,11 @@ const refreshUpstreamBillingRates = async (force = false) => {
 }
 
 const refreshUpstreamBillingSortedList = async (force = false) => {
-  if (!force && sortState.sort_by !== 'upstream_billing_rate' && !accounts.value.some(account =>
-    account.type === 'apikey' && account.extra?.upstream_balance_probe_type && account.extra.upstream_balance_probe_type !== 'disabled')) return
+  if (!force && sortState.sort_by !== 'upstream_billing_rate') return
   await refreshUpstreamBillingRates(force)
 }
 
-useIntervalFn(() => { void refreshUpstreamBillingSortedList() }, 5 * 60_000)
+useIntervalFn(() => { void refreshUpstreamBillingRates() }, 5 * 60_000, { immediate: false })
 
 const debouncedReload = () => {
   clearSelection()
@@ -1825,7 +1806,6 @@ const allColumns = computed(() => {
     { key: 'scheduler_score', label: t('admin.accounts.columns.schedulerScore'), sortable: false },
     { key: 'rate_multiplier', label: t('admin.accounts.columns.billingRateMultiplier'), sortable: true },
     { key: 'upstream_billing_rate', label: t('admin.accounts.columns.upstreamBillingRate'), sortable: true },
-    { key: 'upstream_balance', label: t('admin.accounts.upstreamBalance.title'), sortable: false },
     { key: 'last_used_at', label: t('admin.accounts.columns.lastUsed'), sortable: true },
     { key: 'created_at', label: t('admin.accounts.columns.createdAt'), sortable: true },
     { key: 'expires_at', label: t('admin.accounts.columns.expiresAt'), sortable: true },
@@ -2258,27 +2238,6 @@ const patchUpstreamBillingSnapshot = (accountID: number, snapshot: UpstreamBilli
 const refreshAccountsAfterUpstreamBillingProbe = async () => {
   await refreshUpstreamBillingSortedList(true)
 }
-const handleProbeUpstreamBalance = async (account: Account) => {
-  if (probingUpstreamBalance.has(account.id)) return
-  upstreamBillingRateAbortController?.abort()
-  probingUpstreamBalance.add(account.id)
-  const requestedType = account.extra?.upstream_balance_probe_type
-  const updatedAt = account.updated_at
-  try {
-    const result = await adminAPI.accounts.probeUpstreamBalance(account.id)
-    const current = accounts.value.find(row => row.id === account.id)
-    if (current && current.updated_at === updatedAt && current.extra?.upstream_balance_probe_type === requestedType) {
-      syncAccountRefs({ ...current, extra: { ...current.extra, upstream_balance_probe: result.snapshot } })
-      accounts.value = accounts.value.map(row => row.id === current.id ? { ...row, extra: { ...row.extra, upstream_balance_probe: result.snapshot } } : row)
-    }
-    resetAutoRefreshCache()
-  } catch {
-    appStore.showError(t('admin.accounts.upstreamBalance.status.failed'))
-  } finally {
-    probingUpstreamBalance.delete(account.id)
-  }
-}
-
 const handleProbeUpstreamBilling = async (account: Account) => {
   if (probingUpstreamBilling.has(account.id)) return
   probingUpstreamBilling.add(account.id)

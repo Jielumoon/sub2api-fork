@@ -183,25 +183,6 @@ export default {
           OLLAMA_CLOUD_USAGE_REFRESH_RATE_LIMITED: '刷新过于频繁，请在 {retry_after_seconds} 秒后重试。'
         }
       },
-      upstreamBalance: {
-        title: '上游余额 / 额度',
-        hint: '选择后按全局上游探测周期自动刷新，也可在列表手动刷新。只显示上游实际返回的所选额度；Key 限额模式下通常无法查询钱包或订阅额度。',
-        refresh: '刷新上游余额 / 额度',
-        pending: '等待探测',
-        unlimited: '无限制',
-        updated: '更新于',
-        lastSuccess: '上次成功',
-        paused: '定时探测已全局暂停',
-        limit: '限额', used: '已用', resetsAt: '重置时间', expiresAt: '到期时间',
-        types: {
-          disabled: '不探测', wallet: '钱包余额', key_total: 'Key 总额度',
-          key_5h: 'Key 5 小时额度', key_1d: 'Key 日额度', key_7d: 'Key 周额度',
-          subscription_daily: '订阅日额度', subscription_weekly: '订阅周额度',
-          subscription_monthly: '订阅月额度', subscription_remaining: '订阅综合剩余额度'
-        },
-        status: { unsupported: '上游不支持此接口', unavailable: '上游未提供所选额度', failed: '探测失败，请稍后刷新' },
-        upstreamStatus: { active: '上游 Key 有效', disabled: '上游 Key 已禁用', expired: '上游 Key 已到期', quota_exhausted: '上游 Key 额度已用尽' }
-      },
       upstreamBilling: {
         trustWarning: '此倍率由上游站点针对当前 API Key 自行声明。Sub2API 无法验证该值是否与实际扣费一致；上游站点或中间代理可能返回伪造、过期或被篡改的数据。请结合账单、余额变化和实际用量自行核验。',
         autoProbe: '自动探测上游声明倍率',

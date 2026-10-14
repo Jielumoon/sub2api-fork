@@ -303,21 +303,6 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
     expect(createAccountMock.mock.calls[0]?.[0]?.extra).not.toHaveProperty('upstream_request_id_header')
   })
 
-  it('默认关闭余额探测，选择后保存具体额度类型', async () => {
-    const wrapper = mountModal()
-    await selectButtonByText(wrapper, 'OpenAI')
-    await selectButtonByText(wrapper, 'API Key')
-    const select = wrapper.getComponent({ name: 'UpstreamBalanceProbeSelect' })
-    expect(select.props('modelValue')).toBe('disabled')
-    select.vm.$emit('update:modelValue', 'key_1d')
-    await wrapper.get('form#create-account-form input[type="text"]').setValue('余额账号')
-    await wrapper.get('form#create-account-form input[type="password"]').setValue('test-api-key')
-    await wrapper.get('form#create-account-form').trigger('submit.prevent')
-    await flushPromises()
-    expect(createAccountMock.mock.calls[0]?.[0]?.extra?.upstream_balance_probe_type).toBe('key_1d')
-    wrapper.unmount()
-  })
-
   it('sends the trimmed upstream request id header in extra when filled', async () => {
     const wrapper = mountModal()
     await selectButtonByText(wrapper, 'OpenAI')

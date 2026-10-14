@@ -1102,31 +1102,6 @@ export interface UpstreamBillingData {
 
 export type UpstreamBillingProbeStatus = 'ok' | 'unsupported' | 'failed'
 
-export type UpstreamBalanceProbeType = 'disabled' | 'wallet' | 'key_total' | 'key_5h' | 'key_1d' | 'key_7d'
-  | 'subscription_daily' | 'subscription_weekly' | 'subscription_monthly' | 'subscription_remaining'
-
-export interface UpstreamBalanceProbeSnapshot {
-  type: UpstreamBalanceProbeType
-  status: 'ok' | 'unsupported' | 'unavailable' | 'failed'
-  data?: {
-    remaining?: number
-    limit?: number
-    used?: number
-    unlimited?: boolean
-    unit: string
-    reset_at?: string
-    expires_at?: string
-    upstream_status?: 'active' | 'disabled' | 'expired' | 'quota_exhausted'
-  }
-  received_at?: string
-  fresh_until?: string
-  last_attempt_at: string
-  next_probe_at: string
-  failure_count?: number
-  http_status?: number
-  last_error?: string
-}
-
 export interface UpstreamBillingProbeSnapshot {
   status: UpstreamBillingProbeStatus
   data?: UpstreamBillingData
@@ -1156,7 +1131,6 @@ export interface UpstreamBillingProbeResult {
 export interface UpstreamBillingRateSnapshotItem {
   account_id: number
   snapshot?: UpstreamBillingProbeSnapshot | null
-  balance_snapshot?: UpstreamBalanceProbeSnapshot | null
 }
 
 export interface UpstreamBillingRatesResponse {
@@ -1277,8 +1251,6 @@ export interface Account {
     upstream_billing_probe_enabled?: boolean
     upstream_billing_rate_sync_enabled?: boolean
     upstream_billing_probe?: UpstreamBillingProbeSnapshot
-    upstream_balance_probe_type?: UpstreamBalanceProbeType
-    upstream_balance_probe?: UpstreamBalanceProbeSnapshot
     codex_reset_credit_snapshot?: {
       available_count?: number
       credits?: { expires_at?: string }[]

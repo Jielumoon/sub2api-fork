@@ -1910,7 +1910,6 @@ func (s *stubAccountRepo) UpdateWithAccountBillingSettings(
 	probeEnabled *bool,
 	rateSyncEnabled *bool,
 	rateMultiplier *float64,
-	balanceType ...*string,
 ) error {
 	return errors.New("not implemented")
 }
