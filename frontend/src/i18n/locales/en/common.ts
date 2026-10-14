@@ -184,6 +184,7 @@ export default {
     accounts: 'Accounts',
     plugins: 'Plugins',
     proxies: 'Proxies',
+    upstreams: 'Upstreams',
     redeemCodes: 'Redeem Codes',
     ops: 'Ops',
     promoCodes: 'Promo Codes',

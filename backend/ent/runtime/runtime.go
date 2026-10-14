@@ -37,6 +37,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
+	"github.com/Wei-Shaw/sub2api/ent/upstream"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -1951,6 +1952,101 @@ func init() {
 	tlsfingerprintprofileDescEnableGrease := tlsfingerprintprofileFields[2].Descriptor()
 	// tlsfingerprintprofile.DefaultEnableGrease holds the default value on creation for the enable_grease field.
 	tlsfingerprintprofile.DefaultEnableGrease = tlsfingerprintprofileDescEnableGrease.Default.(bool)
+	upstreamMixin := schema.Upstream{}.Mixin()
+	upstreamMixinHooks1 := upstreamMixin[1].Hooks()
+	upstream.Hooks[0] = upstreamMixinHooks1[0]
+	upstreamMixinInters1 := upstreamMixin[1].Interceptors()
+	upstream.Interceptors[0] = upstreamMixinInters1[0]
+	upstreamMixinFields0 := upstreamMixin[0].Fields()
+	_ = upstreamMixinFields0
+	upstreamFields := schema.Upstream{}.Fields()
+	_ = upstreamFields
+	// upstreamDescCreatedAt is the schema descriptor for created_at field.
+	upstreamDescCreatedAt := upstreamMixinFields0[0].Descriptor()
+	// upstream.DefaultCreatedAt holds the default value on creation for the created_at field.
+	upstream.DefaultCreatedAt = upstreamDescCreatedAt.Default.(func() time.Time)
+	// upstreamDescUpdatedAt is the schema descriptor for updated_at field.
+	upstreamDescUpdatedAt := upstreamMixinFields0[1].Descriptor()
+	// upstream.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	upstream.DefaultUpdatedAt = upstreamDescUpdatedAt.Default.(func() time.Time)
+	// upstream.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	upstream.UpdateDefaultUpdatedAt = upstreamDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// upstreamDescName is the schema descriptor for name field.
+	upstreamDescName := upstreamFields[0].Descriptor()
+	// upstream.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	upstream.NameValidator = func() func(string) error {
+		validators := upstreamDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// upstreamDescBaseURL is the schema descriptor for base_url field.
+	upstreamDescBaseURL := upstreamFields[1].Descriptor()
+	// upstream.BaseURLValidator is a validator for the "base_url" field. It is called by the builders before save.
+	upstream.BaseURLValidator = func() func(string) error {
+		validators := upstreamDescBaseURL.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(base_url string) error {
+			for _, fn := range fns {
+				if err := fn(base_url); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// upstreamDescAPIKeyEncrypted is the schema descriptor for api_key_encrypted field.
+	upstreamDescAPIKeyEncrypted := upstreamFields[2].Descriptor()
+	// upstream.APIKeyEncryptedValidator is a validator for the "api_key_encrypted" field. It is called by the builders before save.
+	upstream.APIKeyEncryptedValidator = upstreamDescAPIKeyEncrypted.Validators[0].(func(string) error)
+	// upstreamDescEnabled is the schema descriptor for enabled field.
+	upstreamDescEnabled := upstreamFields[4].Descriptor()
+	// upstream.DefaultEnabled holds the default value on creation for the enabled field.
+	upstream.DefaultEnabled = upstreamDescEnabled.Default.(bool)
+	// upstreamDescIntervalMinutes is the schema descriptor for interval_minutes field.
+	upstreamDescIntervalMinutes := upstreamFields[5].Descriptor()
+	// upstream.DefaultIntervalMinutes holds the default value on creation for the interval_minutes field.
+	upstream.DefaultIntervalMinutes = upstreamDescIntervalMinutes.Default.(int)
+	// upstreamDescConfigVersion is the schema descriptor for config_version field.
+	upstreamDescConfigVersion := upstreamFields[6].Descriptor()
+	// upstream.ConfigVersionValidator is a validator for the "config_version" field. It is called by the builders before save.
+	upstream.ConfigVersionValidator = func() func(string) error {
+		validators := upstreamDescConfigVersion.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(config_version string) error {
+			for _, fn := range fns {
+				if err := fn(config_version); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// upstreamDescFailureCount is the schema descriptor for failure_count field.
+	upstreamDescFailureCount := upstreamFields[10].Descriptor()
+	// upstream.DefaultFailureCount holds the default value on creation for the failure_count field.
+	upstream.DefaultFailureCount = upstreamDescFailureCount.Default.(int)
+	// upstreamDescLastError is the schema descriptor for last_error field.
+	upstreamDescLastError := upstreamFields[11].Descriptor()
+	// upstream.DefaultLastError holds the default value on creation for the last_error field.
+	upstream.DefaultLastError = upstreamDescLastError.Default.(string)
+	// upstream.LastErrorValidator is a validator for the "last_error" field. It is called by the builders before save.
+	upstream.LastErrorValidator = upstreamDescLastError.Validators[0].(func(string) error)
 	usagecleanuptaskMixin := schema.UsageCleanupTask{}.Mixin()
 	usagecleanuptaskMixinFields0 := usagecleanuptaskMixin[0].Fields()
 	_ = usagecleanuptaskMixinFields0

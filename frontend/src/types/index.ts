@@ -1675,6 +1675,85 @@ export interface UpdateProxyRequest {
   expiry_warn_days?: number
 }
 
+// ==================== 上游实体 ====================
+
+export type UpstreamProbeStatus = 'ok' | 'unsupported' | 'unavailable' | 'failed'
+
+export type UpstreamUsageItemKind =
+  | 'wallet' | 'key_total' | 'key_5h' | 'key_1d' | 'key_7d'
+  | 'subscription_daily' | 'subscription_weekly' | 'subscription_monthly' | 'subscription_remaining'
+
+// 字段缺失表示上游未提供，不等于 0
+export interface UpstreamUsageItem {
+  remaining?: number
+  limit?: number
+  used?: number
+  unlimited?: boolean
+  reset_at?: string
+}
+
+export interface UpstreamUsageData {
+  unit: string
+  upstream_status?: string
+  expires_at?: string
+  items: Partial<Record<UpstreamUsageItemKind, UpstreamUsageItem>>
+}
+
+export interface UpstreamProbeSnapshot {
+  status: UpstreamProbeStatus
+  data?: UpstreamUsageData
+  received_at?: string
+  fresh_until?: string
+  last_attempt_at: string
+  next_probe_at: string
+  failure_count?: number
+  http_status?: number
+  last_error?: string
+}
+
+// 后端只返回掩码 Key，明文与密文都不进入响应
+export interface Upstream {
+  id: number
+  name: string
+  base_url: string
+  api_key_masked: string
+  api_key_configured: boolean
+  proxy_id: number | null
+  enabled: boolean
+  interval_minutes: number
+  probe?: UpstreamProbeSnapshot
+  next_probe_at: string | null
+  last_attempt_at: string | null
+  failure_count: number
+  last_error: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateUpstreamRequest {
+  name: string
+  base_url: string
+  api_key: string
+  proxy_id?: number | null
+  enabled?: boolean
+  interval_minutes?: number
+}
+
+// api_key 缺省或空串表示不轮换；proxy_id 缺省表示不改，显式 null 表示清除代理
+export interface UpdateUpstreamRequest {
+  name?: string
+  base_url?: string
+  api_key?: string
+  proxy_id?: number | null
+  enabled?: boolean
+  interval_minutes?: number
+}
+
+export interface UpstreamProbeResponse {
+  upstream_id: number
+  snapshot: UpstreamProbeSnapshot
+}
+
 export interface AdminDataPayload {
   type?: string
   version?: number

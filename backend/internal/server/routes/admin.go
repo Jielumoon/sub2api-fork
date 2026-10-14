@@ -67,6 +67,9 @@ func RegisterAdminRoutes(
 		// 代理管理
 		registerProxyRoutes(admin, h, stepUpAuth)
 
+		// 上游实体（余额／额度探测）
+		registerUpstreamRoutes(admin, h, stepUpAuth)
+
 		// 卡密管理
 		registerRedeemCodeRoutes(admin, h)
 
@@ -513,6 +516,20 @@ func registerCNProviderRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		cn.GET("/accounts/:id/quota", h.Admin.CNProvider.QueryQuota)
 		// payg 账号余额（kimi/deepseek；zhipu 无余额端点）。
 		cn.GET("/accounts/:id/balance", h.Admin.CNProvider.QueryBalance)
+	}
+}
+
+// registerUpstreamRoutes 上游实体的增删改查与手动探测。
+// 写操作里只有创建／更新涉及查询用 Key（密文入库、响应只给掩码），不额外要求 step-up。
+func registerUpstreamRoutes(admin *gin.RouterGroup, h *handler.Handlers, _ middleware.StepUpAuthMiddleware) {
+	upstreams := admin.Group("/upstreams")
+	{
+		upstreams.GET("", h.Admin.Upstream.List)
+		upstreams.POST("", h.Admin.Upstream.Create)
+		upstreams.GET("/:id", h.Admin.Upstream.GetByID)
+		upstreams.PUT("/:id", h.Admin.Upstream.Update)
+		upstreams.DELETE("/:id", h.Admin.Upstream.Delete)
+		upstreams.POST("/:id/probe", h.Admin.Upstream.Probe)
 	}
 }
 

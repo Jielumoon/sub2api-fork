@@ -1597,6 +1597,48 @@ var (
 		Columns:    TLSFingerprintProfilesColumns,
 		PrimaryKey: []*schema.Column{TLSFingerprintProfilesColumns[0]},
 	}
+	// UpstreamsColumns holds the columns for the "upstreams" table.
+	UpstreamsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "base_url", Type: field.TypeString, Size: 500},
+		{Name: "api_key_encrypted", Type: field.TypeString},
+		{Name: "proxy_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "interval_minutes", Type: field.TypeInt, Default: 15},
+		{Name: "config_version", Type: field.TypeString, Size: 64},
+		{Name: "probe", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "next_probe_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_attempt_at", Type: field.TypeTime, Nullable: true},
+		{Name: "failure_count", Type: field.TypeInt, Default: 0},
+		{Name: "last_error", Type: field.TypeString, Size: 100, Default: ""},
+	}
+	// UpstreamsTable holds the schema information for the "upstreams" table.
+	UpstreamsTable = &schema.Table{
+		Name:       "upstreams",
+		Columns:    UpstreamsColumns,
+		PrimaryKey: []*schema.Column{UpstreamsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "upstream_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamsColumns[3]},
+			},
+			{
+				Name:    "upstream_proxy_id",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamsColumns[7]},
+			},
+			{
+				Name:    "upstream_enabled_next_probe_at",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamsColumns[8], UpstreamsColumns[12]},
+			},
+		},
+	}
 	// UsageCleanupTasksColumns holds the columns for the "usage_cleanup_tasks" table.
 	UsageCleanupTasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -2121,6 +2163,7 @@ var (
 		SettingsTable,
 		SubscriptionPlansTable,
 		TLSFingerprintProfilesTable,
+		UpstreamsTable,
 		UsageCleanupTasksTable,
 		UsageLogsTable,
 		UsersTable,
@@ -2248,6 +2291,9 @@ func init() {
 	}
 	TLSFingerprintProfilesTable.Annotation = &entsql.Annotation{
 		Table: "tls_fingerprint_profiles",
+	}
+	UpstreamsTable.Annotation = &entsql.Annotation{
+		Table: "upstreams",
 	}
 	UsageCleanupTasksTable.Annotation = &entsql.Annotation{
 		Table: "usage_cleanup_tasks",

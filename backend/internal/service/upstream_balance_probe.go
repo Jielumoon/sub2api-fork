@@ -355,50 +355,84 @@ func (s *UpstreamBillingProbeService) requestUpstreamProbe(ctx context.Context, 
 		}
 		proxyURL = account.Proxy.URL()
 	}
-	requestCtx, cancel := context.WithTimeout(ctx, upstreamBillingProbeRequestTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, probeURL, nil)
-	if err != nil {
-		return nil, 0, 0, "request_build_failed", nil
-	}
-	req.Header.Set("Authorization", "Bearer "+key)
-	req.Header.Set("Accept", "application/json")
 	profile := HTTPUpstreamProfileDefault
 	if account.Platform == PlatformOpenAI {
 		profile = HTTPUpstreamProfileOpenAI
 	}
-	req = req.WithContext(WithHTTPUpstreamRedirectsDisabled(WithHTTPUpstreamProfile(req.Context(), profile)))
-	account.ApplyHeaderOverrides(req.Header)
 	var tlsProfile *tlsfingerprint.Profile
 	if s.accountTestService.tlsFPProfileService != nil {
 		tlsProfile = s.accountTestService.tlsFPProfileService.ResolveTLSProfile(account)
 	}
-	resp, err := s.accountTestService.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, tlsProfile)
+	body, status, retry, reason := s.accountTestService.sendUpstreamProbe(ctx, upstreamProbeRequest{
+		probeURL:     probeURL,
+		apiKey:       key,
+		proxyURL:     proxyURL,
+		accountID:    account.ID,
+		concurrency:  account.Concurrency,
+		profile:      profile,
+		tlsProfile:   tlsProfile,
+		applyHeaders: account.ApplyHeaderOverrides,
+	}, now)
+	return body, status, retry, reason, nil
+}
+
+// upstreamProbeRequest 是对 Sub2API 上游发起只读探测的出站参数，账号与上游实体共用。
+// probeURL 必须已经过 validateUpstreamBaseURL 校验。
+type upstreamProbeRequest struct {
+	probeURL     string
+	apiKey       string
+	proxyURL     string
+	accountID    int64
+	concurrency  int
+	profile      HTTPUpstreamProfile
+	tlsProfile   *tlsfingerprint.Profile
+	applyHeaders func(http.Header)
+}
+
+// sendUpstreamProbe 统一执行出站信封：超时、禁止重定向、body 上限、404/405 视为 unsupported。
+// 只返回受控错误码，不把上游正文放进错误信息。
+func (s *AccountTestService) sendUpstreamProbe(ctx context.Context, in upstreamProbeRequest, now time.Time) ([]byte, int, time.Duration, string) {
+	if s == nil || s.httpUpstream == nil {
+		return nil, 0, 0, "transport_unavailable"
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, upstreamBillingProbeRequestTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, in.probeURL, nil)
+	if err != nil {
+		return nil, 0, 0, "request_build_failed"
+	}
+	req.Header.Set("Authorization", "Bearer "+in.apiKey)
+	req.Header.Set("Accept", "application/json")
+	req = req.WithContext(WithHTTPUpstreamRedirectsDisabled(WithHTTPUpstreamProfile(req.Context(), in.profile)))
+	if in.applyHeaders != nil {
+		in.applyHeaders(req.Header)
+	}
+	resp, err := s.httpUpstream.DoWithTLS(req, in.proxyURL, in.accountID, in.concurrency, in.tlsProfile)
 	if err != nil {
 		if resp != nil && resp.Body != nil {
 			_ = resp.Body.Close()
 		}
-		return nil, 0, 0, "request_failed", nil
+		return nil, 0, 0, "request_failed"
 	}
 	if resp == nil || resp.Body == nil {
-		return nil, 0, 0, "empty_response", nil
+		return nil, 0, 0, "empty_response"
 	}
 	defer func() { _ = resp.Body.Close() }()
 	retry := retryAfter(resp.Header, now)
 	body, err := io.ReadAll(io.LimitReader(resp.Body, upstreamBillingProbeMaxBodyBytes+1))
 	if err != nil {
-		return nil, resp.StatusCode, retry, "response_read_failed", nil
+		return nil, resp.StatusCode, retry, "response_read_failed"
 	}
 	if len(body) > upstreamBillingProbeMaxBodyBytes {
-		return nil, resp.StatusCode, retry, "response_too_large", nil
+		return nil, resp.StatusCode, retry, "response_too_large"
 	}
 	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusMethodNotAllowed {
-		return nil, resp.StatusCode, retry, "unsupported", nil
+		return nil, resp.StatusCode, retry, "unsupported"
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, resp.StatusCode, retry, "http_error", nil
+		return nil, resp.StatusCode, retry, "http_error"
 	}
-	return body, resp.StatusCode, retry, "", nil
+	return body, resp.StatusCode, retry, ""
 }
 
 // 配置校验与普通 extra 更新共用，观测结果只能由探测器写入。

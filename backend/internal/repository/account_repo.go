@@ -2990,7 +2990,14 @@ func (r *accountRepository) updateUpstreamBillingProbeSnapshotInTx(
 }
 
 func lockAndMatchProbeProxyIdentity(ctx context.Context, client *dbent.Client, account *service.Account) (bool, error) {
-	if account.ProxyID == nil {
+	return lockAndMatchProxyIdentity(ctx, client, account.ProxyID, account.Proxy, account)
+}
+
+// lockAndMatchProxyIdentity 锁住代理行并核对探测期间使用的代理身份未变。
+// expected 为探测开始时使用的代理（nil 表示当时已不可用）；account 用于渲染用户名模板，
+// 无账号上下文（上游实体）时传 nil，库里的模板原文按原样比较。
+func lockAndMatchProxyIdentity(ctx context.Context, client *dbent.Client, proxyID *int64, expected *service.Proxy, account *service.Account) (bool, error) {
+	if proxyID == nil {
 		return true, nil
 	}
 	rows, err := client.QueryContext(ctx, `
@@ -2998,7 +3005,7 @@ func lockAndMatchProbeProxyIdentity(ctx context.Context, client *dbent.Client, a
 		FROM proxies
 		WHERE id = $1 AND deleted_at IS NULL
 		FOR SHARE
-	`, *account.ProxyID)
+	`, *proxyID)
 	if err != nil {
 		return false, err
 	}
@@ -3007,9 +3014,9 @@ func lockAndMatchProbeProxyIdentity(ctx context.Context, client *dbent.Client, a
 		if err := rows.Err(); err != nil {
 			return false, err
 		}
-		return account.Proxy == nil, nil
+		return expected == nil, nil
 	}
-	if account.Proxy == nil || account.Proxy.ID != *account.ProxyID {
+	if expected == nil || expected.ID != *proxyID {
 		return false, nil
 	}
 	var current proxyProbeIdentity
@@ -3018,7 +3025,7 @@ func lockAndMatchProbeProxyIdentity(ctx context.Context, client *dbent.Client, a
 	}
 	// account.Proxy 的用户名已按账号渲染过模板，库里存的是模板原文，比较前按同一账号渲染。
 	current.username = service.RenderProxyUsername(current.username, account)
-	return current == proxyProbeIdentityFromService(account.Proxy), rows.Err()
+	return current == proxyProbeIdentityFromService(expected), rows.Err()
 }
 
 func shouldEnqueueSchedulerOutboxForExtraUpdates(updates map[string]any) bool {

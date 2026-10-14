@@ -238,6 +238,100 @@ export default {
       backupProxy: '备用代理',
     },
 
+    // 上游实体
+    upstreams: {
+      title: '上游',
+      description: '管理上游站点与查询用 Key，定时探测余额与额度',
+      create: '添加上游',
+      edit: '编辑上游',
+      delete: '删除上游',
+      deleteConfirm: '确定删除上游「{name}」？其探测结果会一并清除。',
+      searchPlaceholder: '搜索名称或地址',
+      emptyTitle: '还没有上游',
+      emptyDescription: '添加上游站点后会自动探测其余额与额度',
+      keyNotConfigured: '未配置',
+      noProxy: '直连',
+      proxyUnavailable: '（代理不可用）',
+      enabled: '定时探测',
+      disabled: '已停用',
+      everyMinutes: '每 {n} 分钟',
+      nextProbe: '下次',
+      probe: '刷新',
+      probeNamed: '立即探测 {name}',
+      created: '上游已创建，正在进行首次探测',
+      updated: '上游已更新',
+      deleted: '上游已删除',
+      loadFailed: '加载上游失败',
+      createFailed: '创建上游失败',
+      updateFailed: '更新上游失败',
+      deleteFailed: '删除上游失败',
+      probeFailed: '探测失败',
+      columns: {
+        name: '名称',
+        baseUrl: '地址',
+        apiKey: '查询 Key',
+        proxy: '代理',
+        schedule: '探测计划',
+        balance: '余额 / 额度',
+        actions: '操作'
+      },
+      form: {
+        name: '名称',
+        baseUrl: '站点地址',
+        baseUrlHint: '站点根地址，探测时请求 /v1/usage',
+        apiKey: '查询用 Key',
+        apiKeyHint: '加密存储，保存后只显示掩码',
+        apiKeyKeepHint: '留空表示不修改；填写新值会替换原 Key 并重新探测',
+        proxy: '代理',
+        interval: '探测间隔（分钟）',
+        intervalHint: '5–1440 分钟，默认 15',
+        enabled: '启用定时探测',
+        enabledHint: '关闭只停止定时探测，仍可手动刷新'
+      },
+      errors: {
+        required: '请填写名称和站点地址',
+        apiKeyRequired: '请填写查询用 Key',
+        interval: '探测间隔须为 5–1440 之间的整数',
+        busy: '该上游正在探测中，请稍后再试',
+        identityChanged: '探测期间配置已变更，结果已丢弃，请重新刷新',
+        proxyNotFound: '所选代理不存在',
+        invalidBaseUrl: '站点地址无效或不被允许'
+      },
+      balance: {
+        pending: '等待首次探测',
+        unlimited: '无限制',
+        updated: '更新于',
+        lastSuccess: '上次成功',
+        limit: '限额',
+        used: '已用',
+        resetsAt: '重置',
+        expiresAt: '到期',
+        items: {
+          wallet: '钱包余额',
+          key_total: 'Key 总额度',
+          key_5h: 'Key 5 小时额度',
+          key_1d: 'Key 日额度',
+          key_7d: 'Key 周额度',
+          subscription_daily: '订阅日额度',
+          subscription_weekly: '订阅周额度',
+          subscription_monthly: '订阅月额度',
+          subscription_remaining: '订阅综合剩余'
+        },
+        status: {
+          ok: '正常',
+          unsupported: '上游不支持余额查询接口',
+          unavailable: '上游未返回可用额度',
+          failed: '探测失败'
+        },
+        upstreamStatus: {
+          active: '上游 Key 有效',
+          disabled: '上游 Key 已禁用',
+          expired: '上游 Key 已到期',
+          quota_exhausted: '上游 Key 额度已用尽'
+        }
+      }
+    },
+
     // Redeem Codes Management
     redeem: {
       title: '兑换码管理',

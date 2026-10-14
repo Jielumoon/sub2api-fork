@@ -240,6 +240,100 @@ export default {
       backupProxy: 'Backup proxy',
     },
 
+    // Upstreams
+    upstreams: {
+      title: 'Upstreams',
+      description: 'Manage upstream sites and query keys, and probe their balance and quota on a schedule',
+      create: 'Add Upstream',
+      edit: 'Edit Upstream',
+      delete: 'Delete Upstream',
+      deleteConfirm: 'Delete upstream "{name}"? Its probe results will be cleared as well.',
+      searchPlaceholder: 'Search name or URL',
+      emptyTitle: 'No upstreams yet',
+      emptyDescription: 'Add an upstream site to probe its balance and quota automatically',
+      keyNotConfigured: 'Not configured',
+      noProxy: 'Direct',
+      proxyUnavailable: '(proxy unavailable)',
+      enabled: 'Scheduled',
+      disabled: 'Disabled',
+      everyMinutes: 'Every {n} min',
+      nextProbe: 'Next',
+      probe: 'Refresh',
+      probeNamed: 'Probe {name} now',
+      created: 'Upstream created, running the first probe',
+      updated: 'Upstream updated',
+      deleted: 'Upstream deleted',
+      loadFailed: 'Failed to load upstreams',
+      createFailed: 'Failed to create upstream',
+      updateFailed: 'Failed to update upstream',
+      deleteFailed: 'Failed to delete upstream',
+      probeFailed: 'Probe failed',
+      columns: {
+        name: 'Name',
+        baseUrl: 'URL',
+        apiKey: 'Query Key',
+        proxy: 'Proxy',
+        schedule: 'Schedule',
+        balance: 'Balance / Quota',
+        actions: 'Actions'
+      },
+      form: {
+        name: 'Name',
+        baseUrl: 'Site URL',
+        baseUrlHint: 'Site root URL; probes request /v1/usage',
+        apiKey: 'Query Key',
+        apiKeyHint: 'Stored encrypted; only a mask is shown after saving',
+        apiKeyKeepHint: 'Leave blank to keep the current key; a new value replaces it and re-probes',
+        proxy: 'Proxy',
+        interval: 'Probe interval (minutes)',
+        intervalHint: '5–1440 minutes, default 15',
+        enabled: 'Enable scheduled probing',
+        enabledHint: 'Turning this off only stops scheduled probes; manual refresh still works'
+      },
+      errors: {
+        required: 'Name and site URL are required',
+        apiKeyRequired: 'Query key is required',
+        interval: 'Probe interval must be an integer between 5 and 1440',
+        busy: 'This upstream is being probed, please try again later',
+        identityChanged: 'Configuration changed during the probe; the result was discarded, please refresh again',
+        proxyNotFound: 'The selected proxy does not exist',
+        invalidBaseUrl: 'The site URL is invalid or not allowed'
+      },
+      balance: {
+        pending: 'Waiting for first probe',
+        unlimited: 'Unlimited',
+        updated: 'Updated',
+        lastSuccess: 'Last success',
+        limit: 'Limit',
+        used: 'Used',
+        resetsAt: 'Resets',
+        expiresAt: 'Expires',
+        items: {
+          wallet: 'Wallet balance',
+          key_total: 'Key total quota',
+          key_5h: 'Key 5-hour quota',
+          key_1d: 'Key daily quota',
+          key_7d: 'Key weekly quota',
+          subscription_daily: 'Subscription daily',
+          subscription_weekly: 'Subscription weekly',
+          subscription_monthly: 'Subscription monthly',
+          subscription_remaining: 'Subscription remaining'
+        },
+        status: {
+          ok: 'OK',
+          unsupported: 'Upstream does not support the usage endpoint',
+          unavailable: 'Upstream returned no usable quota',
+          failed: 'Probe failed'
+        },
+        upstreamStatus: {
+          active: 'Upstream key active',
+          disabled: 'Upstream key disabled',
+          expired: 'Upstream key expired',
+          quota_exhausted: 'Upstream key quota exhausted'
+        }
+      }
+    },
+
     // Redeem Codes
     redeem: {
       title: 'Redeem Code Management',
