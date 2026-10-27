@@ -469,8 +469,10 @@ func TestUpstreamServiceUnsupportedUsesStretchedDelay(t *testing.T) {
 	snapshot, err := svc.ProbeUpstream(context.Background(), created.ID)
 	require.NoError(t, err)
 	require.Equal(t, "unsupported", snapshot.Status)
-	// interval 15 分钟 × 8 倍拉伸，超过单倍间隔。
-	require.GreaterOrEqual(t, snapshot.NextProbeAt.Sub(snapshot.LastAttemptAt), 100*time.Minute)
+	// interval 15 分钟先加 ±20% 抖动，再 × 8 倍拉伸，合法范围为 96～144 分钟。
+	delay := snapshot.NextProbeAt.Sub(snapshot.LastAttemptAt)
+	require.GreaterOrEqual(t, delay, 96*time.Minute)
+	require.LessOrEqual(t, delay, 144*time.Minute)
 }
 
 func TestUpstreamServiceProxyUnavailableMarksFailure(t *testing.T) {
