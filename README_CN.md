@@ -534,7 +534,7 @@ cd sub2api-fork/deploy
 #### 前置条件
 
 - Go 1.21+
-- Node.js 18+
+- Node.js 22+（推荐 24 LTS）
 - PostgreSQL 15+
 - Redis 7+
 

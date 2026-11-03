@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { baseCompile } from '@intlify/message-compiler'
+import { createI18n } from 'vue-i18n'
 
 import en from '../locales/en'
 import zh from '../locales/zh'
@@ -30,6 +31,22 @@ function collectCompileErrors(node: unknown, path: string, out: string[]): void 
 }
 
 describe('locale messages compile', () => {
+  it('严格 CSP 禁止动态编译时仍能插值翻译消息', () => {
+    const functionConstructor = vi.spyOn(globalThis, 'Function').mockImplementation(() => {
+      throw new EvalError('CSP 禁止动态代码编译')
+    })
+    try {
+      const i18n = createI18n({
+        legacy: false,
+        locale: 'zh',
+        messages: { zh: { greeting: '严格 CSP 下你好，{name}' } }
+      })
+      expect(i18n.global.t('greeting', { name: '宝宝' })).toBe('严格 CSP 下你好，宝宝')
+    } finally {
+      functionConstructor.mockRestore()
+    }
+  })
+
   it.each([
     ['zh', zh],
     ['en', en]
