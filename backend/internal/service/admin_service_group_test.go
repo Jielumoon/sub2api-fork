@@ -1406,6 +1406,50 @@ func TestAdminService_UpdateGroup_ForceOpenAIFastInvalidatesAuthCache(t *testing
 	require.Equal(t, []int64{existingGroup.ID}, invalidator.groupIDs)
 }
 
+func TestAdminService_CreateGroup_ForceOpenAIUltrafastWins(t *testing.T) {
+	repo := &groupRepoStubForAdmin{}
+	svc := &adminServiceImpl{groupRepo: repo}
+	group, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name: "ultrafast", Platform: PlatformComposite, RateMultiplier: 1,
+		ForceOpenAIFast: true, ForceOpenAIUltrafast: true,
+	})
+	require.NoError(t, err)
+	require.True(t, group.ForceOpenAIUltrafast)
+	require.False(t, group.ForceOpenAIFast)
+}
+
+func TestAdminService_UpdateGroup_ForceOpenAIUltrafastLifecycle(t *testing.T) {
+	existing := &Group{ID: 1, Name: "fast", Platform: PlatformOpenAI, Status: StatusActive, ForceOpenAIFast: true, FreeOpenAIFast: true}
+	repo := &groupRepoStubForAdmin{getByID: existing}
+	invalidator := &authCacheInvalidatorStub{}
+	svc := &adminServiceImpl{groupRepo: repo, authCacheInvalidator: invalidator}
+	enabled := true
+	group, err := svc.UpdateGroup(context.Background(), existing.ID, &UpdateGroupInput{ForceOpenAIUltrafast: &enabled})
+	require.NoError(t, err)
+	require.True(t, group.ForceOpenAIUltrafast)
+	require.False(t, group.ForceOpenAIFast)
+	require.True(t, group.FreeOpenAIFast)
+	require.Equal(t, []int64{existing.ID}, invalidator.groupIDs)
+
+	repo.getByID = group
+	group, err = svc.UpdateGroup(context.Background(), existing.ID, &UpdateGroupInput{})
+	require.NoError(t, err)
+	require.True(t, group.ForceOpenAIUltrafast, "省略新字段时保留已配置策略")
+
+	repo.getByID = group
+	disabled := false
+	group, err = svc.UpdateGroup(context.Background(), existing.ID, &UpdateGroupInput{ForceOpenAIUltrafast: &disabled})
+	require.NoError(t, err)
+	require.False(t, group.ForceOpenAIUltrafast)
+
+	repo.getByID = group
+	group, err = svc.UpdateGroup(context.Background(), existing.ID, &UpdateGroupInput{Platform: PlatformAnthropic, ForceOpenAIUltrafast: &enabled})
+	require.NoError(t, err)
+	require.False(t, group.ForceOpenAIUltrafast)
+	require.False(t, group.ForceOpenAIFast)
+	require.False(t, group.FreeOpenAIFast)
+}
+
 func TestAdminService_UpdateCompositeGroupPreservesLive(t *testing.T) {
 	existingGroup := &Group{
 		ID:       1,

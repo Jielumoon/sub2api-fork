@@ -3256,7 +3256,7 @@ func TestOpenAIGatewayServiceRecordUsage_FreeOpenAIFastMissingPricingRecordsZero
 }
 
 func TestGroupBillsOpenAIFastAtStandardRequiresOpenAIAccount(t *testing.T) {
-	apiKey := &APIKey{Group: &Group{Platform: PlatformComposite, FreeOpenAIFast: true}}
+	apiKey := &APIKey{Group: &Group{Platform: PlatformComposite, FreeOpenAIFast: true, ForceOpenAIUltrafast: true}}
 
 	require.True(t, groupBillsOpenAIFastAtStandard(
 		apiKey,
@@ -3267,6 +3267,11 @@ func TestGroupBillsOpenAIFastAtStandardRequiresOpenAIAccount(t *testing.T) {
 		apiKey,
 		&Account{Platform: PlatformGrok, Type: AccountTypeAPIKey},
 		"priority",
+	))
+	require.False(t, groupBillsOpenAIFastAtStandard(
+		apiKey,
+		&Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth},
+		"ultrafast",
 	))
 }
 

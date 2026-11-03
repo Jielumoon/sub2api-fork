@@ -2224,13 +2224,42 @@ func TestAstraUltrafastPricingUsesSixTimesStandard(t *testing.T) {
 	require.Equal(t, 2.0, configuredServiceTierMultiplier("ultrafast", p))
 }
 
+func TestGPT61SolUltrafastPricingUsesSixTimesStandard(t *testing.T) {
+	svc := newTestBillingService()
+	for _, tc := range []struct {
+		model string
+		input int
+	}{
+		{"gpt-6.1-sol", 1000},
+		{"openai/gpt-6.1-sol-max", 300000},
+	} {
+		t.Run(tc.model, func(t *testing.T) {
+			tokens := UsageTokens{InputTokens: tc.input, OutputTokens: 100, CacheReadTokens: 500, CacheCreationTokens: 100}
+			standard, err := svc.CalculateCostWithServiceTier(tc.model, tokens, 1, "")
+			require.NoError(t, err)
+			ultrafast, err := svc.CalculateCostWithServiceTier(tc.model, tokens, 1, "ultrafast")
+			require.NoError(t, err)
+			require.Positive(t, standard.TotalCost)
+			require.InDelta(t, standard.TotalCost*6, ultrafast.TotalCost, 1e-10)
+		})
+	}
+	custom, fast := 1e-6, 3.0
+	pricing, err := svc.GetModelPricingWithChannel("gpt-6.1-sol", &ChannelModelPricing{
+		InputPrice: &custom, OutputPrice: &custom, CacheReadPrice: &custom, CacheWritePrice: &custom, FastMultiplier: &fast,
+	})
+	require.NoError(t, err)
+	require.Equal(t, custom, pricing.InputPricePerToken)
+	require.Equal(t, 6.0, configuredServiceTierMultiplier("ultrafast", pricing))
+	require.Equal(t, fast, configuredServiceTierMultiplier("priority", pricing))
+}
+
 func TestGPT61SolExplicitZeroCacheWriteAcrossTiers(t *testing.T) {
 	pricing := &PricingService{}
 	var err error
 	pricing.pricingData, err = pricing.parsePricingData([]byte(`{"gpt-6.1-sol":{"litellm_provider":"openai","input_cost_per_token":0.000002,"output_cost_per_token":0.00001,"input_cost_per_token_flex":0.000001,"cache_creation_input_token_cost":0,"cache_creation_input_token_cost_priority":0.000005}}`))
 	require.NoError(t, err)
 	svc := NewBillingService(&config.Config{}, pricing)
-	for _, tier := range []string{"", "fast", "priority", "flex"} {
+	for _, tier := range []string{"", "fast", "priority", "flex", "ultrafast"} {
 		cost, err := svc.CalculateCostWithServiceTier("openai/gpt-6.1-sol-max", UsageTokens{CacheCreationTokens: 300000}, 1, tier)
 		require.NoError(t, err)
 		require.Zero(t, cost.CacheCreationCost)

@@ -26,6 +26,8 @@ describe("groupsOpenAIFast", () => {
       title: expect.any(String),
       force: expect.any(String),
       hint: expect.stringContaining("service_tier=priority"),
+      forceUltrafast: expect.any(String),
+      ultrafastHint: expect.stringContaining("service_tier=ultrafast"),
       free: expect.any(String),
       freeHint: expect.stringContaining("Standard"),
     });
@@ -33,6 +35,8 @@ describe("groupsOpenAIFast", () => {
       title: expect.any(String),
       force: expect.any(String),
       hint: expect.stringContaining("service_tier=priority"),
+      forceUltrafast: expect.any(String),
+      ultrafastHint: expect.stringContaining("service_tier=ultrafast"),
       free: expect.any(String),
       freeHint: expect.stringContaining("Standard"),
     });

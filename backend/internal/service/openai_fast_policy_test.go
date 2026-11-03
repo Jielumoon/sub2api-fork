@@ -358,6 +358,47 @@ func TestApplyOpenAIFastPolicyToBody_GroupForceInjectsAndOverridesTier(t *testin
 	}
 }
 
+func TestApplyOpenAIFastPolicyToBody_GroupUltrafastInjectsAndOverridesTier(t *testing.T) {
+	svc := newOpenAIGatewayServiceWithSettings(t, DefaultOpenAIFastPolicySettings())
+	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth}
+	ctx := context.WithValue(context.Background(), ctxkey.Group, &Group{
+		ID: 7, Platform: PlatformComposite, Status: StatusActive, Hydrated: true, ForceOpenAIUltrafast: true,
+	})
+	for _, body := range [][]byte{
+		[]byte(`{"model":"gpt-6.1-sol"}`),
+		[]byte(`{"model":"gpt-6.1-sol","service_tier":"priority"}`),
+	} {
+		updated, err := svc.applyOpenAIFastPolicyToBody(ctx, account, "gpt-6.1-sol", body)
+		require.NoError(t, err)
+		require.Equal(t, OpenAIFastTierUltrafast, gjson.GetBytes(updated, "service_tier").String())
+	}
+}
+
+func TestApplyOpenAIFastPolicyToBody_GroupUltrafastHonorsGlobalPolicy(t *testing.T) {
+	ctx := context.WithValue(context.Background(), ctxkey.Group, &Group{
+		ID: 7, Platform: PlatformOpenAI, Status: StatusActive, Hydrated: true, ForceOpenAIUltrafast: true,
+	})
+	for _, action := range []string{BetaPolicyActionFilter, BetaPolicyActionBlock, OpenAIFastPolicyActionForcePriority} {
+		t.Run(action, func(t *testing.T) {
+			svc := newOpenAIGatewayServiceWithSettings(t, &OpenAIFastPolicySettings{Rules: []OpenAIFastPolicyRule{{
+				Scope: BetaPolicyScopeAll, ServiceTier: OpenAIFastTierUltrafast, Action: action,
+			}}})
+			updated, err := svc.applyOpenAIFastPolicyToBody(ctx, &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth}, "gpt-6.1-sol", []byte(`{"model":"gpt-6.1-sol"}`))
+			if action == BetaPolicyActionBlock {
+				var blocked *OpenAIFastBlockedError
+				require.ErrorAs(t, err, &blocked)
+				return
+			}
+			require.NoError(t, err)
+			if action == BetaPolicyActionFilter {
+				require.False(t, gjson.GetBytes(updated, "service_tier").Exists())
+			} else {
+				require.Equal(t, OpenAIFastTierPriority, gjson.GetBytes(updated, "service_tier").String())
+			}
+		})
+	}
+}
+
 func TestApplyOpenAIFastPolicyToBody_GroupForceStillHonorsGlobalPolicy(t *testing.T) {
 	svc := newOpenAIGatewayServiceWithSettings(t, openAIFastFilterPriorityPolicy())
 	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth}

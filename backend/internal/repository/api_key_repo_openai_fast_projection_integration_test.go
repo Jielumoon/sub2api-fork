@@ -43,4 +43,15 @@ func TestGetByKeyForAuthCarriesGroupForceOpenAIFast(t *testing.T) {
 	require.NotNil(t, got.Group)
 	require.True(t, got.Group.ForceOpenAIFast)
 	require.True(t, got.Group.FreeOpenAIFast)
+	require.False(t, got.Group.ForceOpenAIUltrafast)
+
+	group.ForceOpenAIFast = false
+	group.ForceOpenAIUltrafast = true
+	groupRepo := newGroupRepositoryWithSQL(integrationEntClient, integrationDB)
+	require.NoError(t, groupRepo.Update(ctx, group))
+	got, err = apiKeyRepo.GetByKeyForAuth(ctx, keyValue)
+	require.NoError(t, err)
+	require.True(t, got.Group.Hydrated)
+	require.True(t, got.Group.ForceOpenAIUltrafast)
+	require.False(t, got.Group.ForceOpenAIFast)
 }

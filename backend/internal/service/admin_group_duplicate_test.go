@@ -118,6 +118,16 @@ func (r *duplicateGroupRepoStub) CreateFromSource(_ context.Context, group *Grou
 
 func groupDuplicateTestPointer[T any](value T) *T { return &value }
 
+func TestDuplicateGroupForceOpenAIUltrafast(t *testing.T) {
+	source := &Group{ID: 41, Name: "ultrafast", Platform: PlatformOpenAI, Status: StatusActive, RateMultiplier: 1, ForceOpenAIUltrafast: true}
+	repo := newDuplicateGroupRepoStub(source)
+	svc := &adminServiceImpl{groupRepo: repo, groupDuplicateRepo: repo}
+	duplicate, err := svc.DuplicateGroup(context.Background(), source.ID, "admin:7", "ultrafast-copy")
+	require.NoError(t, err)
+	require.True(t, duplicate.ForceOpenAIUltrafast)
+	require.False(t, duplicate.ForceOpenAIFast)
+}
+
 func TestDuplicateGroupCopiesConfigurationDeeplyAndResetsRuntimeState(t *testing.T) {
 	createdAt := time.Date(2026, time.July, 1, 2, 3, 4, 0, time.UTC)
 	source := &Group{

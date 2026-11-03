@@ -12,12 +12,16 @@ const {
   getUsageSummary,
   getCapacitySummary,
   getLiveCapability,
+  createGroup,
+  updateGroup,
 } = vi.hoisted(() => ({
   listGroups: vi.fn(),
   getModelAllowlistCandidates: vi.fn(),
   getUsageSummary: vi.fn(),
   getCapacitySummary: vi.fn(),
   getLiveCapability: vi.fn(),
+  createGroup: vi.fn(),
+  updateGroup: vi.fn(),
 }));
 
 vi.mock("@/api/admin", () => ({
@@ -29,8 +33,8 @@ vi.mock("@/api/admin", () => ({
       getUsageSummary,
       getCapacitySummary,
       getLiveCapability,
-      create: vi.fn(),
-      update: vi.fn(),
+      create: createGroup,
+      update: updateGroup,
       delete: vi.fn(),
       duplicate: vi.fn(),
       updateSortOrder: vi.fn(),
@@ -79,6 +83,7 @@ const sourceGroup = {
   monthly_limit_usd: null,
   long_context_pricing_enabled: true,
   force_openai_fast: false,
+  force_openai_ultrafast: false,
   free_openai_fast: false,
   model_pricing: [],
   profit_control_enabled: false,
@@ -220,7 +225,13 @@ const mountView = () =>
         GroupCapacityBadge: true,
         GroupRateMultipliersModal: true,
         GroupRPMOverridesModal: true,
-        ReasoningEffortPolicyFields: true,
+        ReasoningEffortPolicyFields: {
+          template: "<div />",
+          methods: {
+            validate: () => true,
+            resetValidation: () => undefined,
+          },
+        },
         CodexManifestAccountsField: CodexManifestAccountsFieldStub,
         PricingEntryCard: true,
         VueDraggable: true,
@@ -236,6 +247,8 @@ describe("GroupsView Codex manifest binding", () => {
     getUsageSummary.mockReset();
     getCapacitySummary.mockReset();
     getLiveCapability.mockReset();
+    createGroup.mockReset().mockResolvedValue(sourceGroup);
+    updateGroup.mockReset().mockResolvedValue(sourceGroup);
 
     listGroups.mockResolvedValue({
       items: [sourceGroup],
@@ -283,6 +296,70 @@ describe("GroupsView Codex manifest binding", () => {
       }),
     );
 
+    wrapper.unmount();
+  });
+
+  it("编辑时回显 Ultrafast，双向互斥并保存策略", async () => {
+    listGroups.mockResolvedValueOnce({
+      items: [{ ...sourceGroup, force_openai_ultrafast: true }],
+      total: 1, page: 1, page_size: 20, pages: 1,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.findAll("button").find((button) => button.text().includes("common.edit"))!.trigger("click");
+    await flushPromises();
+
+    const fast = wrapper.get('[data-testid="edit-force-openai-fast"]');
+    const ultrafast = wrapper.get('[data-testid="edit-force-openai-ultrafast"]');
+    expect(ultrafast.attributes("aria-checked")).toBe("true");
+    await fast.trigger("click");
+    expect(ultrafast.attributes("aria-checked")).toBe("false");
+    await ultrafast.trigger("click");
+    expect(fast.attributes("aria-checked")).toBe("false");
+
+    await wrapper.get("#edit-group-form").trigger("submit");
+    await flushPromises();
+    expect(updateGroup).toHaveBeenCalledWith(sourceGroup.id, expect.objectContaining({
+      force_openai_fast: false, force_openai_ultrafast: true,
+    }));
+    wrapper.unmount();
+  });
+
+  it("创建分组时提交 Ultrafast 策略", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('[data-tour="groups-create-btn"]').trigger("click");
+    wrapper.getComponent('[data-tour="group-form-platform"]').vm.$emit("update:modelValue", "openai");
+    await flushPromises();
+    await wrapper.get("#create-group-form input").setValue("Ultrafast 分组");
+    await wrapper.get('[data-testid="create-force-openai-fast"]').trigger("click");
+    await wrapper.get('[data-testid="create-force-openai-ultrafast"]').trigger("click");
+    expect(wrapper.get('[data-testid="create-force-openai-fast"]').attributes("aria-checked")).toBe("false");
+    await wrapper.get("#create-group-form").trigger("submit");
+    await flushPromises();
+    expect(createGroup).toHaveBeenCalledWith(expect.objectContaining({
+      force_openai_fast: false, force_openai_ultrafast: true,
+    }));
+    wrapper.unmount();
+  });
+
+  it("不支持的平台不会提交残留的强制 tier", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('[data-tour="groups-create-btn"]').trigger("click");
+    const platform = wrapper.getComponent('[data-tour="group-form-platform"]');
+    platform.vm.$emit("update:modelValue", "openai");
+    await flushPromises();
+    await wrapper.get("#create-group-form input").setValue("普通分组");
+    await wrapper.get('[data-testid="create-force-openai-ultrafast"]').trigger("click");
+    platform.vm.$emit("update:modelValue", "anthropic");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="create-force-openai-ultrafast"]').exists()).toBe(false);
+    await wrapper.get("#create-group-form").trigger("submit");
+    await flushPromises();
+    expect(createGroup).toHaveBeenCalledWith(expect.objectContaining({
+      force_openai_fast: false, force_openai_ultrafast: false,
+    }));
     wrapper.unmount();
   });
 });
