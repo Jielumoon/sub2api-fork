@@ -17,6 +17,7 @@ func TestAPIKeyAuthSnapshotGroupForceOpenAIFastRoundtrip(t *testing.T) {
 			ID: groupID, Name: "fast-roundtrip", Platform: PlatformOpenAI, Status: StatusActive,
 			Hydrated: true, ForceOpenAIFast: true, FreeOpenAIFast: true,
 			ForceOpenAIUltrafast: true,
+			RequirePrivacySet:    true,
 		},
 	}
 	svc := &APIKeyService{}
@@ -33,10 +34,13 @@ func TestAPIKeyAuthSnapshotGroupForceOpenAIFastRoundtrip(t *testing.T) {
 	require.True(t, materialized.Group.Hydrated)
 	require.True(t, materialized.Group.ForceOpenAIFast)
 	require.True(t, materialized.Group.ForceOpenAIUltrafast)
+	require.True(t, materialized.Group.RequirePrivacySet)
 	require.True(t, materialized.Group.FreeOpenAIFast)
 	require.Equal(t, apiKeyAuthSnapshotVersion, cached.Snapshot.Version)
-	cached.Snapshot.Version--
-	_, used, err = svc.applyAuthCacheEntry(apiKey.Key, &cached)
-	require.NoError(t, err)
-	require.False(t, used, "旧快照必须回源，不能把新策略当成关闭")
+	for _, version := range []int{26, 27} {
+		cached.Snapshot.Version = version
+		_, used, err = svc.applyAuthCacheEntry(apiKey.Key, &cached)
+		require.NoError(t, err)
+		require.False(t, used, "fork 与上游的旧快照都必须回源，不能把新策略当成关闭")
+	}
 }
