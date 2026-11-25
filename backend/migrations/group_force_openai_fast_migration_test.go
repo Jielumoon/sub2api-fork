@@ -17,7 +17,7 @@ func TestGroupForceOpenAIFastMigration(t *testing.T) {
 	require.Contains(t, sql, "COMMENT ON COLUMN groups.force_openai_fast")
 }
 
-func TestGroupForceOpenAIUltrafastMigration(t *testing.T) {
+func TestForkGroupForceOpenAIUltrafastMigration(t *testing.T) {
 	content, err := FS.ReadFile("249_group_force_openai_ultrafast.sql")
 	require.NoError(t, err)
 	sql := strings.Join(strings.Fields(string(content)), " ")

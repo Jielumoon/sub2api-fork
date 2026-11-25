@@ -87,10 +87,10 @@ export function perMillion(value: number | null | undefined): string {
   return formatScaled(value, PER_MILLION, MIN_DECIMALS)
 }
 
-type CachePrices = Pick<UserPricingInterval, 'cache_write_price' | 'cache_write_1h_price' | 'cache_read_price'>
+type CachePrices = Pick<UserPricingInterval, 'cache_write_price' | 'cache_write_1h_price' | 'cache_write_12h_price' | 'cache_read_price'>
 
 export function hasCachePricing(p: CachePrices | null | undefined): boolean {
-  return p?.cache_write_price != null || p?.cache_write_1h_price != null || p?.cache_read_price != null
+  return p?.cache_write_price != null || p?.cache_write_1h_price != null || p?.cache_write_12h_price != null || p?.cache_read_price != null
 }
 
 /** 任一档带缓存价才按档渲染缓存列；否则沿用平价的写入/读取两行。 */

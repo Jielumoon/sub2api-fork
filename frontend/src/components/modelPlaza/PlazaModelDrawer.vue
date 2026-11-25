@@ -186,6 +186,7 @@ const officialItems = computed(() => {
     { label: t('modelPlaza.table.output'), value: o.output_price },
     { label: t('modelPlaza.table.cacheWrite'), value: o.cache_write_price },
     { label: `${t('modelPlaza.table.cacheWrite')} (1h)`, value: o.cache_write_1h_price },
+    { label: `${t('modelPlaza.table.cacheWrite')} (12h)`, value: o.cache_write_12h_price },
     { label: t('modelPlaza.table.cacheRead'), value: o.cache_read_price }
   ]
   return items.filter((item) => item.value != null).map((item) => ({ ...item, value: perMillion(item.value) }))

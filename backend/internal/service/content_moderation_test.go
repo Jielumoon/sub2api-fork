@@ -551,6 +551,8 @@ func TestContentModerationCheck_KeywordsIgnoredInObserveMode(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, decision.Allowed, "observe mode must let the request through even on keyword hit")
 	require.Equal(t, ContentModerationActionAllow, decision.Action)
+	// 服务器关闭前等待异步审核结束，避免旧请求打到后续测试复用的端口。
+	require.Eventually(t, func() bool { return svc.asyncProcessed.Load() == 1 }, time.Second, time.Millisecond)
 }
 
 func TestContentModerationCheck_KeywordOnlyStrategySkipsAPIOnMiss(t *testing.T) {

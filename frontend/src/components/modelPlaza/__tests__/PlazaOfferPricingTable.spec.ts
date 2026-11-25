@@ -66,6 +66,23 @@ describe('PlazaOfferPricingTable token 计费', () => {
     expect(cache).toContain('$7.00')
   })
 
+  it.each([false, true])('仅有 12h 缓存价时仍展示缓存列（分档：%s）', (tiered) => {
+    const model = tokenModel()
+    model.pricing = {
+      ...model.pricing!,
+      cache_write_price: null,
+      cache_read_price: null,
+      cache_write_12h_price: tiered ? null : 7e-6,
+      intervals: tiered ? ladderIntervals().map((iv) => ({
+        ...iv, cache_write_price: null, cache_read_price: null,
+        cache_write_1h_price: null, cache_write_12h_price: 7e-6
+      })) : []
+    }
+    const cache = cells(mountOffer(model, { rate_multiplier: 2 }))[4].text()
+    expect(cache).toContain('12h')
+    expect(cache).toContain('$14.00')
+  })
+
   it('阶梯内联进输入/输出/缓存列并按倍率折算，每档一行，档位标签只在输入列', () => {
     const c = cells(mountOffer(ladderModel(), { rate_multiplier: 0.5 }))
     expect(c[2].text()).toContain('≤272K')

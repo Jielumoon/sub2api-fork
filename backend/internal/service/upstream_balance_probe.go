@@ -135,62 +135,6 @@ func validProbeTimestamp(value string) string {
 	return value
 }
 
-// 倍率与额度共享代理、SSRF 校验、TLS 画像及禁止重定向的传输边界。
-func (s *UpstreamBillingProbeService) requestUpstreamProbe(ctx context.Context, account *Account, endpoint string, now time.Time) ([]byte, int, time.Duration, string, error) {
-	if s.accountTestService == nil || s.accountTestService.httpUpstream == nil {
-		return nil, 0, 0, "transport_unavailable", nil
-	}
-	key := account.GetCredential("api_key")
-	if key == "" {
-		return nil, 0, 0, "missing_api_key", nil
-	}
-	baseURL := account.GetCredential("base_url")
-	if account.RoutesProtocolByInbound() && account.IsAdaptiveAPIProtocol() {
-		baseURL = account.GetCNProtocolBaseURL(APIProtocolChatCompletions)
-	}
-	if account.Platform == PlatformOpenAI {
-		if baseURL == "" {
-			baseURL = "https://api.openai.com"
-		}
-	} else if upstreamBillingProbeTargetIsOfficialAPI(baseURL) {
-		return nil, 0, 0, "unsupported", nil
-	}
-	normalized, err := s.accountTestService.validateUpstreamBaseURL(baseURL)
-	if err != nil {
-		return nil, 0, 0, "invalid_base_url", nil
-	}
-	probeURL := buildOpenAIEndpointURL(normalized, endpoint)
-	proxyURL := ""
-	if account.ProxyID != nil {
-		if account.Proxy == nil {
-			return nil, 0, 0, "proxy_unavailable", nil
-		}
-		if account.Proxy.ID != *account.ProxyID {
-			return nil, 0, 0, "", ErrUpstreamBillingProbeIdentityChanged
-		}
-		proxyURL = account.Proxy.URL()
-	}
-	profile := HTTPUpstreamProfileDefault
-	if account.Platform == PlatformOpenAI {
-		profile = HTTPUpstreamProfileOpenAI
-	}
-	var tlsProfile *tlsfingerprint.Profile
-	if s.accountTestService.tlsFPProfileService != nil {
-		tlsProfile = s.accountTestService.tlsFPProfileService.ResolveTLSProfile(account)
-	}
-	body, status, retry, reason := s.accountTestService.sendUpstreamProbe(ctx, upstreamProbeRequest{
-		probeURL:     probeURL,
-		apiKey:       key,
-		proxyURL:     proxyURL,
-		accountID:    account.ID,
-		concurrency:  account.Concurrency,
-		profile:      profile,
-		tlsProfile:   tlsProfile,
-		applyHeaders: account.ApplyHeaderOverrides,
-	}, now)
-	return body, status, retry, reason, nil
-}
-
 // upstreamProbeRequest 是对 Sub2API 上游发起只读探测的出站参数，账号与上游实体共用。
 // probeURL 必须已经过 validateUpstreamBaseURL 校验。
 type upstreamProbeRequest struct {
@@ -201,7 +145,7 @@ type upstreamProbeRequest struct {
 	concurrency  int
 	profile      HTTPUpstreamProfile
 	tlsProfile   *tlsfingerprint.Profile
-	applyHeaders func(http.Header)
+	applyHeaders func(context.Context, http.Header)
 }
 
 // sendUpstreamProbe 统一执行出站信封：超时、禁止重定向、body 上限、404/405 视为 unsupported。
@@ -220,7 +164,7 @@ func (s *AccountTestService) sendUpstreamProbe(ctx context.Context, in upstreamP
 	req.Header.Set("Accept", "application/json")
 	req = req.WithContext(WithHTTPUpstreamRedirectsDisabled(WithHTTPUpstreamProfile(req.Context(), in.profile)))
 	if in.applyHeaders != nil {
-		in.applyHeaders(req.Header)
+		in.applyHeaders(req.Context(), req.Header)
 	}
 	resp, err := s.httpUpstream.DoWithTLS(req, in.proxyURL, in.accountID, in.concurrency, in.tlsProfile)
 	if err != nil {

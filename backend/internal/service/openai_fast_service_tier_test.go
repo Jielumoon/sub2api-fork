@@ -456,37 +456,52 @@ func TestForward_ResponsesServiceTierFastNormalizedToPriorityUpstream(t *testing
 
 func TestForward_ResponsesGroupUltrafastReachesUpstreamAndBilling(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	body := []byte(`{"model":"gpt-6.1-sol","service_tier":"priority","input":"hello","stream":false}`)
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
-	c.Request.Header.Set("Content-Type", "application/json")
-	upstream := &httpUpstreamRecorder{resp: &http.Response{
-		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
-		Body: io.NopCloser(strings.NewReader(
-			`{"id":"resp_ultrafast","object":"response","status":"completed","model":"gpt-6.1-sol","output":[],"usage":{"input_tokens":1,"output_tokens":1}}`,
-		)),
-	}}
-	svc := &OpenAIGatewayService{
-		cfg:            &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: false}}},
-		httpUpstream:   upstream,
-		settingService: NewSettingService(&openAIFastPolicyRepoStub{values: map[string]string{}}, &config.Config{}),
+	for _, action := range []string{BetaPolicyActionPass, BetaPolicyActionFilter, BetaPolicyActionBlock} {
+		t.Run(action, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			body := []byte(`{"model":"gpt-6.1-sol","service_tier":"priority","input":"hello","stream":false}`)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
+			c.Request.Header.Set("Content-Type", "application/json")
+			upstream := &httpUpstreamRecorder{resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body: io.NopCloser(strings.NewReader(
+					`{"id":"resp_ultrafast","object":"response","status":"completed","model":"gpt-6.1-sol","output":[],"usage":{"input_tokens":1,"output_tokens":1}}`,
+				)),
+			}}
+			svc := newOpenAIGatewayServiceWithSettings(t, &OpenAIFastPolicySettings{
+				Rules: []OpenAIFastPolicyRule{{ServiceTier: OpenAIFastTierUltrafast, Action: action, Scope: BetaPolicyScopeAll}},
+			})
+			svc.cfg = &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: false}}}
+			svc.httpUpstream = upstream
+			account := &Account{
+				ID: 7, Platform: PlatformOpenAI, Type: AccountTypeAPIKey,
+				Concurrency: 1, Credentials: map[string]any{"api_key": "sk-test"},
+				Extra: map[string]any{"openai_responses_supported": true}, Status: StatusActive, Schedulable: true,
+			}
+			ctx := context.WithValue(context.Background(), ctxkey.Group, &Group{
+				ID: 7, Platform: PlatformOpenAI, Status: StatusActive, Hydrated: true, ForceOpenAIUltrafast: true,
+			})
+			result, err := svc.Forward(ctx, c, account, body)
+			if action == BetaPolicyActionBlock {
+				var blocked *OpenAIFastBlockedError
+				require.ErrorAs(t, err, &blocked)
+				require.Nil(t, upstream.lastBody)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			if action == BetaPolicyActionFilter {
+				require.False(t, gjson.GetBytes(upstream.lastBody, "service_tier").Exists())
+				require.Nil(t, result.ServiceTier)
+				return
+			}
+			require.Equal(t, OpenAIFastTierUltrafast, gjson.GetBytes(upstream.lastBody, "service_tier").String())
+			require.NotNil(t, result.ServiceTier)
+			require.Equal(t, OpenAIFastTierUltrafast, *result.ServiceTier)
+		})
 	}
-	account := &Account{
-		ID: 7, Platform: PlatformOpenAI, Type: AccountTypeAPIKey,
-		Concurrency: 1, Credentials: map[string]any{"api_key": "sk-test"},
-		Extra: map[string]any{"openai_responses_supported": true}, Status: StatusActive, Schedulable: true,
-	}
-	ctx := context.WithValue(context.Background(), ctxkey.Group, &Group{
-		ID: 7, Platform: PlatformOpenAI, Status: StatusActive, Hydrated: true, ForceOpenAIUltrafast: true,
-	})
-	result, err := svc.Forward(ctx, c, account, body)
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	require.Equal(t, OpenAIFastTierUltrafast, gjson.GetBytes(upstream.lastBody, "service_tier").String())
-	require.NotNil(t, result.ServiceTier)
-	require.Equal(t, OpenAIFastTierUltrafast, *result.ServiceTier)
 }
 
 func TestForward_ResponsesServiceTierOmittedStaysOmitted(t *testing.T) {
